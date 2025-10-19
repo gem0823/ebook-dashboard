@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖服部 中文電子書徵集進度儀表板</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS 用於處理 XLSX (Excel) 檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 使用 Inter 和 Noto Sans TC 字體 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* 用於平滑切換的高度過渡效果 */
+        .content-section {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .content-section.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+        }
+        /* Modal 動畫 */
+        .modal-content.open {
+            transform: scale(1);
+            opacity: 1;
+        }
+        /* 表格滾動條樣式 */
+        .table-container::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .table-container::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 3px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+        
+        /* 表頭任務類型顏色 */
+        .task-header-new { background-color: #e0f2fe; color: #0c4a6e; } /* light-blue */
+        .task-header-expand { background-color: #dcfce7; color: #166534; } /* light-green */
+        
+        /* 自定義日期輸入框 */
+        input[type="date"] {
+            border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.25rem 0.5rem;
+            font-size: 0.875rem; line-height: 1.25rem; min-width: 130px;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+        input[type="date"]:invalid { color: #9ca3af; }
+
+        /* KPI 表格樣式 */
+        .kpi-table th, .kpi-table td { text-align: center; padding: 0.75rem 0.5rem; border: 1px solid #e5e7eb; }
+        .kpi-table .header-group { background-color: #f3f4f6; font-weight: bold; }
+        .kpi-table .header-sub { background-color: #f9fafb; font-size: 0.75rem; }
+        .kpi-table .item-col { text-align: left; font-weight: bold; background-color: #f9fafb; }
+        .kpi-table .total-row { font-weight: bold; background-color: #f3f4f6; }
+        .kpi-table .highlight { background-color: #e0f2fe; }
+        .kpi-table .gap-col { color: #dc2626; font-weight: bold; }
+
+        /* 其他輔助樣式 */
+        .percentage { color: #6b7280; font-size: 0.75rem; margin-left: 4px; }
+        .clickable-stat { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #9ca3af; transition: all 0.2s; }
+        .clickable-stat:hover { color: #4f46e5; text-decoration-color: #4f46e5; }
+        .health-warning { background-color: #fef9c3; color: #a16207; }
+        .health-critical { background-color: #fee2e2; color: #b91c1c; }
+        .sortable-header { cursor: pointer; user-select: none; }
+        .sortable-header:hover { background-color: #f3f4f6; }
+        .sort-asc::after { content: ' ▲'; font-size: 0.6em; }
+        .sort-desc::after { content: ' ▼'; font-size: 0.6em; }
+        .row-dirty { background-color: #fef9c3 !important; }
+
+        /* Toast 提示框 */
+        #toast {
+            position: fixed; top: 20px; right: 20px;
+            transform: translateX(200%); transition: transform 0.5s ease-in-out;
+            z-index: 100;
+        }
+        #toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased">
+
+    <div class="flex h-screen">
+        <!-- 左側導覽選單 -->
+        <aside class="w-64 bg-white shadow-md flex flex-col shrink-0">
+            <div class="p-6 border-b">
+                <h1 class="text-xl font-bold text-gray-800">圖服部儀表板</h1>
+                <p class="text-sm text-gray-500 mt-1">中文電子書徵集進度</p>
+            </div>
+            <nav class="flex-1 px-4 py-6">
+                <ul class="space-y-2">
+                    <li><a href="#" id="nav-publisher-master" class="flex items-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>出版社母體管理</a></li>
+                    <li><a href="#" id="nav-team-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>團隊簽約進度</a></li>
+                    <li><a href="#" id="nav-individual-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 11h-4.17a6.12 6.12 0 0 1-5.6-3.07"/></svg>個人簽約進度</a></li>
+                    <li><a href="#" id="nav-publisher-tier" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v4"/><path d="m15 13-3-3-3 3"/></svg>出版社分級聯繫進度</a></li>
+                    <li><a href="#" id="nav-individual-contact" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" y1="2" x2="8" y2="4"/><line x1="16" y1="2" x2="16" y2="4"/></svg>個人聯繫進度</a></li>
+                    <li class="border-t pt-2 mt-2"><a href="#" id="nav-export" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>匯出報表</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t mt-auto">
+                <p class="text-xs text-gray-500">版本 v4.6.0 (Optimized)</p>
+                <p class="text-xs text-gray-500">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
+            </div>
+        </aside>
+
+        <!-- 右側主內容區 -->
+        <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+            <header class="mb-8">
+                <h2 id="main-title" class="text-3xl font-bold text-gray-900">出版社母體管理</h2>
+            </header>
+
+            <div class="relative">
+                <!-- 模組一：出版社母體管理 -->
+                <section id="content-publisher-master" class="content-section">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                            <h3 class="text-lg font-semibold text-gray-800">目標出版社清單</h3>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button id="add-publisher-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 inline-flex items-center text-sm">
+                                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    新增出版社
+                                </button>
+                                <button id="download-template-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-700 transition-all duration-200 inline-flex items-center text-sm">
+                                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    下載範本
+                                </button>
+                                <button id="import-data-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-blue-700 transition-all duration-200 inline-flex items-center text-sm">
+                                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    匯入資料
+                                </button>
+                                <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls">
+                            </div>
+                        </div>
+                        <!-- 搜尋與篩選 -->
+                        <div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b">
+                            <input type="text" id="search-input" placeholder="搜尋出版社、合約編號..." class="w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <select id="staff-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                            <select id="tier-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                            <select id="status-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                            <button id="clear-filters-btn" class="text-sm text-gray-600 hover:text-indigo-600">清除篩選</button>
+                        </div>
+                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表一&gt;</h4>
+                        <div class="overflow-x-auto max-h-[65vh] table-container">
+                            <table class="w-full text-sm text-left text-gray-600 border-collapse">
+                                <thead class="bg-gray-50 text-xs text-gray-700 uppercase sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200">Notion 紀錄</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="name">出版社名稱</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contractId">合約編號</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="staff">負責同仁</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="tier">分級</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contactStatus">聯繫狀態</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="missionTags">任務標籤</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-new" data-task-header="task_new_ebook">取得:電子書合作</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c">取得:B2C銷售權利</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_gvm">取得:[灰熊]</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_trms">取得:電子教科書TRMS</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_kingstone">取得:[書紐]金石堂</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_sanmin">取得:[書紐]三民</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c_3rd">取得:B2C經銷第三方</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b">取得:B2B銷售權利</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_union">取得:B2B_聯盟</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_public">取得:B2B_公圖</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_cn">取得:B2B_CN</th>
+                                        <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-list-body">
+                                    <tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-gray-500">正在從資料庫載入資料...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 模組二：團隊簽約進度 -->
+                <section id="content-team-signing" class="content-section hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿徵集團體目標(中文電子書)</h3>
+                        <p class="text-xs text-gray-500 mb-4">備註：本表中的數量為出版社品牌家數。統計時同一出版社，於此表只會被計算至一個項目，不重複計算。</p>
+                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表二&gt;</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse kpi-table">
+                                <thead>
+                                    <tr class="header-group">
+                                        <th rowspan="2" class="item-col">項目</th>
+                                        <th colspan="6">目標</th>
+                                        <th colspan="13">進度</th>
+                                    </tr>
+                                    <tr class="header-sub">
+                                        <th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th><th class="highlight">家數合計</th>
+                                        <th>8月</th><th>8月達成率</th>
+                                        <th>9月</th><th>9月達成率</th>
+                                        <th>10月</th><th>10月達成率</th>
+                                        <th>11月</th><th>11月達成率</th>
+                                        <th>12月</th><th>12月達成率</th>
+                                        <th class="highlight">家數合計</th><th class="highlight">各項目達成率</th><th class="gap-col">缺口家數</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpi-table-body"></tbody>
+                                <tfoot id="kpi-table-footer"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 模組三：個人簽約進度 -->
+                <section id="content-individual-signing" class="content-section hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">個人簽約率總覽</h3>
+                        <h4 class="text-sm font-semibold text-gray-500 mb-4">&lt;表三&gt;</h4>
+                        <div class="overflow-x-auto rounded-lg border">
+                            <table class="w-full text-sm text-left text-gray-600">
+                                <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">負責人</th>
+                                        <th scope="col" class="px-6 py-3">負責單位數</th>
+                                        <th scope="col" class="px-6 py-3">已簽約</th>
+                                        <th scope="col" class="px-6 py-3">簽約率</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="individual-signing-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 模組四：出版社分級聯繫進度 -->
+                <section id="content-publisher-tier" class="content-section hidden">
+                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表四&gt;</h4>
+                    <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <label for="progress-filter" class="text-sm font-medium text-gray-700">篩選檢視:</label>
+                            <select id="progress-filter" class="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                        </div>
+                        <div class="text-xs text-gray-600 flex items-center gap-4">
+                            <span class="font-bold">分級定義:</span>
+                            <span><span class="font-semibold text-red-600">A級:</span> 最重要</span>
+                            <span><span class="font-semibold text-yellow-600">B級:</span> 次之</span>
+                            <span><span class="font-semibold text-blue-600">C級:</span> 一般</span>
+                        </div>
+                    </div>
+                    <div id="progress-cards-container" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
+                </section>
+
+                <!-- 模組五：個人聯繫進度 -->
+                <section id="content-individual-contact" class="content-section hidden">
+                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表五&gt;</h4>
+                    <div id="individual-contact-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </section>
+
+                <!-- 模組六：匯出報表 -->
+                <section id="content-export" class="content-section hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">選擇要匯出的報表</h3>
+                        <div class="space-y-4" id="export-options-container">
+                            <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="export-option" value="table1" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-3 text-sm font-medium text-gray-800">&lt;表一&gt; 出版社母體管理</span>
+                            </label>
+                            <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="export-option" value="table2" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-3 text-sm font-medium text-gray-800">&lt;表二&gt; 團隊簽約進度</span>
+                            </label>
+                            <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="export-option" value="table3" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-3 text-sm font-medium text-gray-800">&lt;表三&gt; 個人簽約進度</span>
+                            </label>
+                            <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="export-option" value="table4" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-3 text-sm font-medium text-gray-800">&lt;表四&gt; 出版社分級聯繫進度</span>
+                            </label>
+                            <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="export-option" value="table5" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-3 text-sm font-medium text-gray-800">&lt;表五&gt; 個人聯繫進度</span>
+                            </label>
+                        </div>
+                        <div class="mt-6 text-right">
+                            <button id="export-selected-btn" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-green-700 transition-all duration-200 inline-flex items-center text-sm">
+                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                匯出所選報表
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="add-publisher-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-95 opacity-0">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800">新增/編輯出版社</h3>
+                <button id="close-add-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="add-publisher-form" class="p-6 space-y-4">
+                <input type="hidden" id="edit-publisher-id">
+                <div>
+                    <label for="new-publisher-name" class="block text-sm font-medium text-gray-700">出版社名稱</label>
+                    <input type="text" id="new-publisher-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="new-publisher-notion-url" class="block text-sm font-medium text-gray-700">Notion 紀錄連結</label>
+                    <input type="url" id="new-publisher-notion-url" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="貼上 Notion 頁面連結">
+                </div>
+                <div>
+                    <label for="new-publisher-contract-id" class="block text-sm font-medium text-gray-700">合約編號</label>
+                    <input type="text" id="new-publisher-contract-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="例如: EBK00001 (若無則留空)">
+                </div>
+                <div>
+                    <label for="new-publisher-mission-tags" class="block text-sm font-medium text-gray-700">任務標籤</label>
+                    <input type="text" id="new-publisher-mission-tags" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="多個標籤請用 , 隔開">
+                </div>
+                <div>
+                    <label for="new-publisher-staff" class="block text-sm font-medium text-gray-700">負責同仁</label>
+                    <select id="new-publisher-staff" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                </div>
+                <div>
+                    <label for="new-publisher-tier" class="block text-sm font-medium text-gray-700">分級</label>
+                    <select id="new-publisher-tier" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                </div>
+                <div>
+                    <label for="new-publisher-status" class="block text-sm font-medium text-gray-700">聯繫狀態</label>
+                    <select id="new-publisher-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+                </div>
+            </form>
+            <div class="p-4 bg-gray-50 rounded-b-xl text-right space-x-2">
+                <button id="cancel-add-btn" type="button" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">取消</button>
+                <button id="save-add-btn" type="submit" form="add-publisher-form" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">儲存</button>
+            </div>
+        </div>
+    </div>
+    <div id="publisher-list-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div id="publisher-list-modal-content" class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800" id="publisher-list-title">出版社清單</h3>
+                <button id="close-publisher-list-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 max-h-[60vh] overflow-y-auto"><ul id="publisher-list-body" class="space-y-2 text-sm text-gray-700 list-disc list-inside"></ul></div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0">
+            <div class="p-6 text-center">
+                <svg class="w-16 h-16 mx-auto text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">操作提醒</h3>
+                <p id="alert-modal-text" class="mt-2 text-sm text-gray-600"></p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-b-xl text-center">
+                <button id="close-alert-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">我知道了</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="">
+        <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert">
+        </div>
+    </div>
+
+<script>
+  const __app_id = "ebook-dashboard";
+  const __firebase_config = JSON.stringify({
+    apiKey: "AIzaSyA735uIwaSCjz09KwI0SNXgvmTwmk5kzXA",
+  authDomain: "ebook-dashboard-a0148.firebaseapp.com",
+  projectId: "ebook-dashboard-a0148",
+  storageBucket: "ebook-dashboard-a0148.firebasestorage.app",
+  messagingSenderId: "127405787765",
+  appId: "1:127405787765:web:72631dc3d362466660c63c"
+  });
+</script>
+
+    <script type="module">
+        // --- Firebase SDK Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, writeBatch, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            // --- 設定與常數 ---
+            const staffList = ["陳玫君", "陳俐吟", "李芷瑄", "李虹儀", "未分配"];
+            const tierList = ["A", "B", "C", "X"];
+            const contactStatusList = ["未聯繫", "聯繫中", "已聯繫，無意願洽談", "已聯繫，有意願洽談", "審約中", "用印中", "已簽回，已移交合約"];
+            const taskColumns = [ 'task_new_ebook', 'task_get_b2c', 'task_get_gvm', 'task_get_trms', 'task_get_kingstone', 'task_get_sanmin', 'task_get_b2c_3rd', 'task_get_b2b', 'task_get_b2b_union', 'task_get_b2b_public', 'task_get_b2b_cn' ];
+            const kpiTargets = {
+                'B2C':    { months: [4, 6, 6, 5, 3], taskKey: 'task_get_b2c' },
+                'B2B':    { months: [2, 3, 3, 2, 2], taskKey: 'task_get_b2b' },
+                '未合作': { months: [2, 3, 3, 3, 3], taskKey: 'task_new_ebook' },
+                'TRMS':   { months: [2, 2, 2, 2, 0], taskKey: 'task_get_trms' }
+            };
+            const pageTitles = { publisherMaster: '出版社母體管理', teamSigning: '團隊簽約進度', individualSigning: '個人簽約進度', publisherTier: '出版社分級聯繫進度', individualContact: '個人聯繫進度', export: '匯出報表' };
+            const initialData = [
+                { name: "悅文社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
+                { name: "東立出版社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: { task_new_ebook: '2025-08-01' }, notionUrl: null },
+                { name: "臺灣東販", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
+                { name: "長鴻出版社", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "尖端", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "親子天下", staff: "李芷瑄", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "商周", staff: "李芷瑄", tier: "A", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00123", tasks: { task_get_b2b_public: '2025-10-02' }, notionUrl: null },
+                { name: "我識出版", staff: "李芷瑄", tier: "B", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00124", tasks: { task_new_ebook: '2025-10-02', task_get_b2c: '2025-10-02' }, notionUrl: null },
+                { name: "新加坡大學出版社", staff: "李芷瑄", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "晨星出版", staff: "李虹儀", tier: "B", contactStatus: "聯繫中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "時報文化", staff: "李虹儀", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
+                { name: "群學出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null }
+            ];
+
+            // --- 全域狀態管理 ---
+            const state = {
+                publishers: [],
+                analytics: {}, // 存放所有計算好的分析數據
+                filters: { search: '', staff: 'all', tier: 'all', status: 'all' },
+                sort: { by: 'name', order: 'asc' },
+                db: null,
+                publishersCollection: null
+            };
+
+            // --- DOM 元素快取 ---
+            const dom = {
+                navLinks: Object.fromEntries(Object.keys(pageTitles).map(id => [id, document.getElementById(`nav-${id.replace('publisherMaster', 'publisher-master').replace('teamSigning','team-signing').replace('individualSigning','individual-signing').replace('publisherTier','publisher-tier').replace('individualContact','individual-contact')}`)])),
+                contentSections: Object.fromEntries(Object.keys(pageTitles).map(id => [id, document.getElementById(`content-${id.replace('publisherMaster', 'publisher-master').replace('teamSigning','team-signing').replace('individualSigning','individual-signing').replace('publisherTier','publisher-tier').replace('individualContact','individual-contact')}`)])),
+                mainTitle: document.getElementById('main-title'),
+                dbStatus: document.getElementById('db-status'),
+                masterListBody: document.getElementById('master-list-body'),
+                searchInput: document.getElementById('search-input'),
+                staffFilter: document.getElementById('staff-filter'),
+                tierFilter: document.getElementById('tier-filter'),
+                statusFilter: document.getElementById('status-filter'),
+                // Modals
+                addPublisherModal: document.getElementById('add-publisher-modal'),
+                addPublisherModalContent: document.getElementById('add-publisher-modal').querySelector('.modal-content'),
+                addPublisherForm: document.getElementById('add-publisher-form'),
+                publisherListModal: document.getElementById('publisher-list-modal'),
+                publisherListModalContent: document.getElementById('publisher-list-modal').querySelector('.modal-content'),
+                alertModal: document.getElementById('alert-modal'),
+                alertModalContent: document.getElementById('alert-modal').querySelector('.modal-content'),
+                alertModalText: document.getElementById('alert-modal-text'),
+            };
+
+            // --- Firebase 核心功能 ---
+            async function initializeFirebase() {
+                try {
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                    if (!firebaseConfig.apiKey) throw new Error("Firebase config is missing.");
+                    
+                    const app = initializeApp(firebaseConfig);
+                    state.db = getFirestore(app);
+                    const auth = getAuth(app);
+
+                    onAuthStateChanged(auth, user => {
+                        if (user) {
+                            dom.dbStatus.textContent = '已連接';
+                            dom.dbStatus.className = 'font-semibold text-green-600';
+                            state.publishersCollection = collection(state.db, `/artifacts/${appId}/public/data/publishers`);
+                            listenToPublishers();
+                        } else {
+                            dom.dbStatus.textContent = '未授權';
+                            dom.dbStatus.className = 'font-semibold text-red-600';
+                        }
+                    });
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    dom.dbStatus.textContent = '連接失敗';
+                    dom.dbStatus.className = 'font-semibold text-red-600';
+                    dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-red-500">資料庫連接失敗，請檢查設定或重新整理。</td></tr>`;
+                }
+            }
+
+            function listenToPublishers() {
+                onSnapshot(state.publishersCollection, async (snapshot) => {
+                    if (snapshot.empty && initialData.length > 0) {
+                        await seedInitialData();
+                        return; // Seeding triggers another snapshot
+                    }
+                    state.publishers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    state.analytics = calculateAllAnalytics(state.publishers);
+                    renderAll();
+                }, (error) => {
+                    console.error("Error listening to publishers collection:", error);
+                    dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-red-500">讀取資料時發生錯誤。</td></tr>`;
+                });
+            }
+
+            async function seedInitialData() {
+                const batch = writeBatch(state.db);
+                initialData.forEach(pubData => {
+                    const completeData = { ...pubData, tasks: pubData.tasks || {} };
+                    taskColumns.forEach(key => {
+                        if (!completeData.tasks.hasOwnProperty(key)) {
+                            completeData.tasks[key] = null;
+                        }
+                    });
+                    const newDocRef = doc(state.publishersCollection);
+                    batch.set(newDocRef, completeData);
+                });
+                await batch.commit();
+                showToast("已載入初始範例資料", "success");
+            }
+
+            // --- 核心渲染邏輯 ---
+            function renderAll() {
+                const filteredAndSorted = getFilteredAndSortedData();
+                renderMasterList(filteredAndSorted);
+                renderTeamSigningProgress(state.analytics.teamSigningStats);
+                renderIndividualSigningProgress(state.analytics.individualSigningStats);
+                renderPublisherTierProgress(state.analytics.tierProgressStats);
+                renderIndividualContactProgress(state.analytics.individualContactStats);
+            }
+            
+            function renderMasterList(data) {
+                if (data.length === 0) {
+                    const message = state.publishers.length > 0 ? "沒有符合篩選條件的結果。" : "資料庫中尚無資料，請新增或匯入。";
+                    dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                    return;
+                }
+                dom.masterListBody.innerHTML = data.map(pub => createPublisherRowHtml(pub)).join('');
+            }
+            
+            // --- 資料分析與計算 (集中處理) ---
+            function calculateAllAnalytics(publishers) {
+                return {
+                    teamSigningStats: calculateTeamSigningStats(publishers),
+                    individualSigningStats: calculateIndividualSigningStats(publishers),
+                    tierProgressStats: calculateTierProgressStats(publishers),
+                    individualContactStats: calculateIndividualContactStats(publishers),
+                };
+            }
+
+            function calculateTeamSigningStats(publishers) {
+                const stats = {};
+                Object.keys(kpiTargets).forEach(item => {
+                    const targetData = kpiTargets[item];
+                    const progressCounts = { 8: 0, 9: 0, 10: 0, 11: 0, 12: 0 };
+                    publishers.forEach(pub => {
+                        const dateStr = pub.tasks[targetData.taskKey];
+                        if (dateStr) {
+                            try {
+                                const month = new Date(dateStr).getMonth() + 1;
+                                if (progressCounts.hasOwnProperty(month)) {
+                                    progressCounts[month]++;
+                                }
+                            } catch (e) { /* ignore invalid date */ }
+                        }
+                    });
+                    stats[item] = {
+                        targets: targetData.months,
+                        progress: [progressCounts[8], progressCounts[9], progressCounts[10], progressCounts[11], progressCounts[12]]
+                    };
+                });
+                return stats;
+            }
+
+            function calculateIndividualSigningStats(publishers) {
+                 const stats = {};
+                 staffList.forEach(s => stats[s] = { total: 0, signed: 0 });
+                 publishers.forEach(p => {
+                     if (!stats[p.staff]) stats[p.staff] = { total: 0, signed: 0 }; // Handle staff not in default list
+                     stats[p.staff].total++;
+                     if (p.contactStatus === "已簽回，已移交合約") {
+                         stats[p.staff].signed++;
+                     }
+                 });
+                 return Object.entries(stats)
+                    .filter(([, data]) => data.total > 0)
+                    .map(([name, data]) => ({
+                        name,
+                        ...data,
+                        rate: data.total > 0 ? (data.signed / data.total * 100) : 0
+                    }));
+            }
+
+            function calculateTierProgressStats(publishers) {
+                const progressData = {};
+                const currentStaff = Array.from(new Set(publishers.map(p => p.staff))).sort();
+
+                currentStaff.forEach(staffName => {
+                    progressData[staffName] = {};
+                    tierList.forEach(tier => {
+                        progressData[staffName][tier] = { total: 0, stages: {} };
+                        contactStatusList.forEach(s => progressData[staffName][tier].stages[s] = 0);
+                    });
+                });
+
+                publishers.forEach(p => {
+                    if (progressData[p.staff] && progressData[p.staff][p.tier]) {
+                        progressData[p.staff][p.tier].total++;
+                        if (progressData[p.staff][p.tier].stages.hasOwnProperty(p.contactStatus)) {
+                             progressData[p.staff][p.tier].stages[p.contactStatus]++;
+                        }
+                    }
+                });
+                return progressData;
+            }
+            
+            function calculateIndividualContactStats(publishers) {
+                const stats = {};
+                staffList.forEach(s => stats[s] = { total: 0, contacted: 0 });
+                 publishers.forEach(p => {
+                    if (!stats[p.staff]) stats[p.staff] = { total: 0, contacted: 0 };
+                    stats[p.staff].total++;
+                    if (p.contactStatus !== "未聯繫") {
+                        stats[p.staff].contacted++;
+                    }
+                });
+                 return Object.entries(stats)
+                    .filter(([, data]) => data.total > 0)
+                    .map(([name, data]) => ({
+                        name,
+                        ...data,
+                        rate: data.total > 0 ? (data.contacted / data.total * 100) : 0
+                    }));
+            }
+            
+            // --- 各模組渲染函式 (使用計算好的 analytics) ---
+            function renderTeamSigningProgress(stats) {
+                const kpiTableBody = document.getElementById('kpi-table-body');
+                const kpiTableFooter = document.getElementById('kpi-table-footer');
+                let bodyHtml = '';
+                const progressTotals = {
+                    target: { months: [0, 0, 0, 0, 0], total: 0 },
+                    progress: { months: [0, 0, 0, 0, 0], total: 0 }
+                };
+
+                Object.keys(kpiTargets).forEach(item => {
+                    const itemStats = stats[item];
+                    const targetData = itemStats.targets;
+                    const progressMonths = itemStats.progress;
+                    const targetTotal = targetData.reduce((a, b) => a + b, 0);
+                    const progressTotal = progressMonths.reduce((a, b) => a + b, 0);
+                    const overallRate = targetTotal > 0 ? (progressTotal / targetTotal * 100).toFixed(1) : 0;
+                    const gap = targetTotal - progressTotal;
+                    
+                    targetData.forEach((m, i) => progressTotals.target.months[i] += m);
+                    progressTotals.target.total += targetTotal;
+                    progressMonths.forEach((m, i) => progressTotals.progress.months[i] += m);
+                    progressTotals.progress.total += progressTotal;
+
+                    const progressCells = progressMonths.map((p, i) =>
+                        `<td>${p}</td><td>${targetData[i] > 0 ? (p / targetData[i] * 100).toFixed(0) : 0}%</td>`
+                    ).join('');
+                    
+                    bodyHtml += `<tr>
+                        <td class="item-col">${item}</td>
+                        ${targetData.map(m => `<td>${m}</td>`).join('')}
+                        <td class="highlight">${targetTotal}</td>
+                        ${progressCells}
+                        <td class="highlight">${progressTotal}</td>
+                        <td class="highlight"><div class="flex items-center justify-center"><span>${overallRate}%</span><div class="w-16 bg-gray-200 rounded-full h-2.5 ml-2"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${overallRate}%"></div></div></div></td>
+                        <td class="gap-col">${gap}</td>
+                    </tr>`;
+                });
+                kpiTableBody.innerHTML = bodyHtml;
+
+                const footerOverallRate = progressTotals.target.total > 0 ? (progressTotals.progress.total / progressTotals.target.total * 100).toFixed(1) : 0;
+                const footerGap = progressTotals.target.total - progressTotals.progress.total;
+                const footerProgressCells = progressTotals.progress.months.map((p, i) =>
+                    `<td>${p}</td><td>${progressTotals.target.months[i] > 0 ? (p / progressTotals.target.months[i] * 100).toFixed(0) : 0}%</td>`
+                ).join('');
+
+                kpiTableFooter.innerHTML = `<tr class="total-row">
+                    <td class="item-col">總計</td>
+                    ${progressTotals.target.months.map(m => `<td>${m}</td>`).join('')}
+                    <td class="highlight">${progressTotals.target.total}</td>
+                    ${footerProgressCells}
+                    <td class="highlight">${progressTotals.progress.total}</td>
+                    <td class="highlight">${footerOverallRate}%</td>
+                    <td class="gap-col">${footerGap}</td>
+                </tr>`;
+            }
+
+            function renderIndividualSigningProgress(stats) {
+                 const tableBody = document.getElementById('individual-signing-body');
+                 tableBody.innerHTML = stats.map((row, index) => {
+                     const rate = row.rate.toFixed(1);
+                     return `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
+                         <td class="px-6 py-4 font-medium text-gray-900">${row.name}</td>
+                         <td class="px-6 py-4">${row.total}</td>
+                         <td class="px-6 py-4">${row.signed}</td>
+                         <td class="px-6 py-4"><div class="flex items-center">
+                             <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                                <div class="${rate >= 80 ? 'bg-green-600' : rate >= 50 ? 'bg-yellow-400' : 'bg-red-500'} h-2.5 rounded-full" style="width: ${rate}%"></div>
+                             </div>
+                             <span class="font-medium">${rate}%</span>
+                         </div></td>
+                     </tr>`;
+                 }).join('');
+            }
+            
+            function renderPublisherTierProgress(progressData) {
+                const container = document.getElementById('progress-cards-container');
+                const filter = document.getElementById('progress-filter');
+                const staffInFilter = Object.keys(progressData).sort();
+                
+                container.innerHTML = staffInFilter.map(name => createProgressCardHTML(name, progressData[name])).join('') || '<p class="text-center text-gray-500 col-span-full">無資料可顯示。</p>';
+                
+                // Update and preserve filter selection
+                const currentFilterValue = filter.value;
+                filter.innerHTML = `<option value="all">顯示全部同仁</option>${staffInFilter.map(name => `<option value="${name}">${name}</option>`).join('')}`;
+                filter.value = staffInFilter.includes(currentFilterValue) ? currentFilterValue : 'all';
+                filter.dispatchEvent(new Event('change')); // Trigger filter change to show/hide cards
+                
+                applyHealthCheck();
+            }
+
+            function renderIndividualContactProgress(stats) {
+                 const container = document.getElementById('individual-contact-cards-container');
+                 container.innerHTML = stats.map(row => {
+                     const rate = row.rate.toFixed(0);
+                     return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                         <h3 class="font-semibold text-gray-800">${row.name}</h3>
+                         <p class="text-sm text-gray-500 mb-4">單位聯繫進度</p>
+                         <div class="flex justify-between items-center text-sm mb-1"><span>進度</span><span class="font-bold">${rate}%</span></div>
+                         <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${rate}%;"></div></div>
+                         <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between text-sm">
+                             <span class="text-gray-600">已聯繫: <strong class="text-gray-900">${row.contacted}</strong></span>
+                             <span class="text-gray-600">總單位: <strong class="text-gray-900">${row.total}</strong></span>
+                         </div>
+                     </div>`;
+                 }).join('');
+            }
+            
+            // --- Helper 函式 ---
+            function createPublisherRowHtml(pub) {
+                const taskCells = taskColumns.map(taskKey => `<td class="px-3 py-2 border-b border-gray-200"><input type="date" class="task-date-input" data-task="${taskKey}" value="${pub.tasks[taskKey] || ''}"></td>`).join('');
+                return `
+                <tr class="bg-white hover:bg-gray-50" data-id="${pub.id}">
+                    <td class="px-3 py-2 border-b border-gray-200">
+                        <div class="flex items-center space-x-1">
+                            <input type="url" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="notionUrl" value="${pub.notionUrl || ''}" placeholder="貼上連結...">
+                            <button class="open-notion-btn p-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" title="打開 Notion 連結" ${!pub.notionUrl ? 'disabled' : ''}>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-3 py-3 font-medium text-gray-900 border-b border-gray-200 whitespace-nowrap">${pub.name}</td>
+                    <td class="px-3 py-3 border-b border-gray-200"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="contractId" value="${pub.contractId || ''}" placeholder="無合約編號"></td>
+                    <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="staff">${staffList.map(s => `<option value="${s}" ${pub.staff === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+                    <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="tier">${tierList.map(t => `<option value="${t}" ${pub.tier === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+                    <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5 min-w-[150px]" data-field="contactStatus">${contactStatusList.map(s => `<option value="${s}" ${pub.contactStatus === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+                    <td class="px-3 py-2 border-b border-gray-200"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5 min-w-[200px]" data-field="missionTags" value="${Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''}" placeholder="無標籤"></td>
+                    ${taskCells}
+                    <td class="px-3 py-2 border-b border-gray-200">
+                        <div class="flex items-center space-x-2">
+                            <button class="save-row-btn hidden text-sm bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600">儲存</button>
+                            <button class="cancel-row-btn hidden text-sm bg-gray-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-gray-600">取消</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }
+
+            function getFilteredAndSortedData() {
+                let data = [...state.publishers];
+                // Filter
+                if (state.filters.search) {
+                    const searchTerm = state.filters.search.toLowerCase();
+                    data = data.filter(p => p.name.toLowerCase().includes(searchTerm) || (p.contractId && p.contractId.toLowerCase().includes(searchTerm)));
+                }
+                if (state.filters.staff !== 'all') data = data.filter(p => p.staff === state.filters.staff);
+                if (state.filters.tier !== 'all') data = data.filter(p => p.tier === state.filters.tier);
+                if (state.filters.status !== 'all') data = data.filter(p => p.contactStatus === state.filters.status);
+                
+                // Sort
+                data.sort((a, b) => {
+                    let valA = a[state.sort.by] || '';
+                    let valB = b[state.sort.by] || '';
+                    if (Array.isArray(valA)) valA = valA.join(', ');
+                    if (Array.isArray(valB)) valB = valB.join(', ');
+
+                    if (valA < valB) return state.sort.order === 'asc' ? -1 : 1;
+                    if (valA > valB) return state.sort.order === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                return data;
+            }
+
+            // --- 事件監聽器設定 ---
+            function setupEventListeners() {
+                // Navigation
+                Object.keys(dom.navLinks).forEach(key => dom.navLinks[key].addEventListener('click', (e) => { e.preventDefault(); switchContent(key); }));
+
+                // Master List Filters
+                dom.searchInput.addEventListener('input', e => { state.filters.search = e.target.value; renderAll(); });
+                dom.staffFilter.addEventListener('change', e => { state.filters.staff = e.target.value; renderAll(); });
+                dom.tierFilter.addEventListener('change', e => { state.filters.tier = e.target.value; renderAll(); });
+                dom.statusFilter.addEventListener('change', e => { state.filters.status = e.target.value; renderAll(); });
+                document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
+
+                // Master List Table Actions (Sorting, Editing)
+                document.querySelector('#content-publisher-master thead').addEventListener('click', handleSort);
+                dom.masterListBody.addEventListener('change', handleRowChange);
+                dom.masterListBody.addEventListener('click', handleRowClick);
+                
+                // Main Buttons
+                document.getElementById('add-publisher-btn').addEventListener('click', () => openAddEditModal());
+                document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
+                document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('file-input').click());
+                document.getElementById('file-input').addEventListener('change', handleFileImport);
+                
+                // Add/Edit Modal
+                dom.addPublisherForm.addEventListener('submit', handleSavePublisher);
+                document.getElementById('close-add-modal-btn').addEventListener('click', () => closeModal(dom.addPublisherModal, dom.addPublisherModalContent));
+                document.getElementById('cancel-add-btn').addEventListener('click', () => closeModal(dom.addPublisherModal, dom.addPublisherModalContent));
+                dom.addPublisherModal.addEventListener('click', e => { if (e.target === dom.addPublisherModal) closeModal(dom.addPublisherModal, dom.addPublisherModalContent); });
+                
+                // Publisher List Modal
+                document.getElementById('close-publisher-list-btn').addEventListener('click', () => closeModal(dom.publisherListModal, dom.publisherListModalContent));
+                dom.publisherListModal.addEventListener('click', e => { if (e.target === dom.publisherListModal) closeModal(dom.publisherListModal, dom.publisherListModalContent); });
+
+                // Alert Modal
+                document.getElementById('close-alert-modal-btn').addEventListener('click', () => closeModal(dom.alertModal, dom.alertModalContent));
+                dom.alertModal.addEventListener('click', e => { if (e.target === dom.alertModal) closeModal(dom.alertModal, dom.alertModalContent); });
+
+                // Tier Progress View
+                document.getElementById('progress-filter').addEventListener('change', handleTierProgressFilter);
+                document.getElementById('progress-cards-container').addEventListener('click', handleTierCardClick);
+
+                // Export
+                document.getElementById('export-selected-btn').addEventListener('click', handleExport);
+            }
+
+            // --- 事件處理函式 ---
+            function switchContent(targetId) {
+                dom.mainTitle.textContent = pageTitles[targetId];
+                Object.values(dom.navLinks).forEach(link => link.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm'));
+                dom.navLinks[targetId].classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+                Object.values(dom.contentSections).forEach(section => section.classList.add('hidden'));
+                dom.contentSections[targetId].classList.remove('hidden');
+            }
+
+            function clearFilters() {
+                state.filters = { search: '', staff: 'all', tier: 'all', status: 'all' };
+                dom.searchInput.value = '';
+                dom.staffFilter.value = 'all';
+                dom.tierFilter.value = 'all';
+                dom.statusFilter.value = 'all';
+                renderAll();
+            }
+
+            function handleSort(e) {
+                const header = e.target.closest('.sortable-header');
+                if (!header) return;
+                
+                const sortBy = header.dataset.sort;
+                if (state.sort.by === sortBy) {
+                    state.sort.order = state.sort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.sort.by = sortBy;
+                    state.sort.order = 'asc';
+                }
+                document.querySelectorAll('.sortable-header').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+                header.classList.add(state.sort.order === 'asc' ? 'sort-asc' : 'sort-desc');
+                renderAll();
+            }
+
+            function handleRowChange(e) {
+                const row = e.target.closest('tr');
+                if (!row || !row.dataset.id) return;
+                row.classList.add('row-dirty');
+                row.querySelector('.save-row-btn').classList.remove('hidden');
+                row.querySelector('.cancel-row-btn').classList.remove('hidden');
+            }
+
+            async function handleRowClick(e) {
+                const target = e.target;
+                const row = target.closest('tr');
+                if (!row) return;
+                const docId = row.dataset.id;
+
+                if (target.closest('.open-notion-btn')) {
+                    const url = row.querySelector('[data-field="notionUrl"]').value;
+                    if (url) window.open(url, '_blank');
+                } else if (target.classList.contains('save-row-btn')) {
+                    await saveRowChanges(row, docId);
+                } else if (target.classList.contains('cancel-row-btn')) {
+                    cancelRowChanges(row, docId);
+                }
+            }
+            
+            async function saveRowChanges(row, docId) {
+                const docRef = doc(state.publishersCollection, docId);
+                const updatePayload = {};
+                
+                row.querySelectorAll('.master-field-input, .master-field-select').forEach(input => {
+                    const field = input.dataset.field;
+                    updatePayload[field] = (field === 'missionTags')
+                        ? input.value.split(',').map(t => t.trim()).filter(Boolean)
+                        : (input.value || null);
+                });
+                
+                updatePayload.tasks = {};
+                row.querySelectorAll('.task-date-input').forEach(input => {
+                    updatePayload.tasks[input.dataset.task] = input.value || null;
+                });
+
+                if (updatePayload.contactStatus !== "已簽回，已移交合約" && Object.values(updatePayload.tasks).some(date => date)) {
+                    showAlert("只有在聯繫狀態為「已簽回，已移交合約」時，才能填寫任務完成日期。");
+                    return;
+                }
+                
+                try {
+                    await updateDoc(docRef, updatePayload);
+                    row.classList.remove('row-dirty');
+                    row.querySelector('.save-row-btn').classList.add('hidden');
+                    row.querySelector('.cancel-row-btn').classList.add('hidden');
+                    showToast("儲存成功！", "success");
+                } catch (error) {
+                    console.error("Error updating document:", error);
+                    showToast("儲存失敗", "error");
+                }
+            }
+
+            function cancelRowChanges(row, docId) {
+                const originalData = state.publishers.find(p => p.id === docId);
+                if (originalData) {
+                    const newRowHtml = createPublisherRowHtml(originalData);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = `<table><tbody>${newRowHtml}</tbody></table>`;
+                    row.replaceWith(tempDiv.querySelector('tr'));
+                }
+            }
+
+            // --- 初始載入 ---
+            function init() {
+                initializeFirebase();
+                setupEventListeners();
+                setupFilters();
+                switchContent('publisherMaster');
+            }
+            
+            init();
+
+            // --- 以下為各功能模組的 Helper 函式，保持原樣或微調 ---
+
+            // --- Modal & UI Helpers ---
+            function openModal(modal, content) { modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => content.classList.add('open'), 10); }
+            function closeModal(modal, content) { content.classList.remove('open'); setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300); }
+            function showAlert(message) { dom.alertModalText.textContent = message; openModal(dom.alertModal, dom.alertModalContent); }
+
+            function showToast(message, type = "info") {
+                const toast = document.getElementById('toast');
+                const toastContent = document.getElementById('toast-content');
+                const icons = {
+                    success: `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div>`,
+                    error: `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg></div>`,
+                    warning: `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-orange-500 bg-orange-100 rounded-lg"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.22 3.001-1.742 3.001H4.42c-1.522 0-2.492-1.667-1.742-3.001l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></div>`
+                };
+                toastContent.innerHTML = `${icons[type] || ''}<div class="ml-3 text-sm font-normal">${message}</div>`;
+                toast.classList.add('show');
+                setTimeout(() => { toast.classList.remove('show'); }, 3000);
+            }
+
+            function setupFilters() {
+                dom.staffFilter.innerHTML = `<option value="all">所有同仁</option>${staffList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+                dom.tierFilter.innerHTML = `<option value="all">所有分級</option>${tierList.map(t => `<option value="${t}">${t}級</option>`).join('')}`;
+                dom.statusFilter.innerHTML = `<option value="all">所有狀態</option>${contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+            }
+
+            // --- 新增/編輯 Modal ---
+            function openAddEditModal() {
+                dom.addPublisherForm.reset();
+                document.getElementById('new-publisher-staff').innerHTML = staffList.map(s => `<option value="${s}">${s}</option>`).join('');
+                document.getElementById('new-publisher-tier').innerHTML = tierList.map(t => `<option value="${t}">${t}</option>`).join('');
+                document.getElementById('new-publisher-status').innerHTML = contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('');
+                openModal(dom.addPublisherModal, dom.addPublisherModalContent);
+            }
+            
+            async function handleSavePublisher(e) {
+                e.preventDefault();
+                const tagsInput = document.getElementById('new-publisher-mission-tags').value;
+                const newPublisher = {
+                    name: document.getElementById('new-publisher-name').value,
+                    notionUrl: document.getElementById('new-publisher-notion-url').value || null,
+                    contractId: document.getElementById('new-publisher-contract-id').value || null,
+                    staff: document.getElementById('new-publisher-staff').value,
+                    tier: document.getElementById('new-publisher-tier').value,
+                    contactStatus: document.getElementById('new-publisher-status').value,
+                    missionTags: tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+                    tasks: Object.fromEntries(taskColumns.map(key => [key, null]))
+                };
+                
+                try {
+                    await addDoc(state.publishersCollection, newPublisher);
+                    showToast("出版社新增成功", "success");
+                } catch (error) {
+                    console.error("Error adding document: ", error);
+                    showToast("新增失敗", "error");
+                }
+                closeModal(dom.addPublisherModal, dom.addPublisherModalContent);
+            }
+            
+            // --- XLSX Import/Export ---
+            // (The import/export functions are quite long, keeping them as is, since their logic is mostly self-contained and correct)
+            function downloadTemplate() {
+                 const baseHeaders = ["出版社名稱", "Notion 紀錄連結", "合約編號", "負責同仁", "分級", "聯繫狀態", "徵集組指定任務"];
+                 const taskHeaders = taskColumns.map(key => document.querySelector(`th[data-task-header="${key}"]`).textContent);
+                 const allHeaders = [...baseHeaders, ...taskHeaders];
+                 const exampleRow = [ "範例出版社", "https://www.notion.so/your-page-id", "EBK00001-1", "陳玫君", "A", "聯繫中", "未合作<書>,B2B重點", "2025-08-15", ...Array(taskColumns.length - 1).fill("") ];
+                 const worksheet = window.XLSX.utils.aoa_to_sheet([allHeaders, exampleRow]);
+                 const workbook = window.XLSX.utils.book_new();
+                 window.XLSX.utils.book_append_sheet(workbook, worksheet, "出版社");
+                 window.XLSX.writeFile(workbook, "匯入範本.xlsx");
+            }
+
+            function handleFileImport(event) {
+                const file = event.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = window.XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const records = window.XLSX.utils.sheet_to_json(worksheet);
+                        if (!records || records.length === 0) { showToast("檔案為空或格式錯誤", "error"); return; }
+                        
+                        const batch = writeBatch(state.db);
+                        let createdCount = 0, updatedCount = 0;
+                        
+                        for (const record of records) {
+                            const publisherName = record["出版社名稱"];
+                            if (!publisherName) continue;
+                            
+                            const missionTag = record["徵集組指定任務"];
+                            const missionTags = (missionTag && missionTag !== "不在指定任務範圍") ? missionTag.toString().split(',').map(t => t.trim()) : [];
+                            
+                            const publisherData = {
+                                name: publisherName,
+                                notionUrl: record["Notion 紀錄連結"] || null,
+                                contractId: record["合約編號"] || null,
+                                staff: record["徵集"] || record["負責同仁"] || '未分配',
+                                tier: record["分級"] || 'X',
+                                contactStatus: record["聯繫狀態"] || '未聯繫',
+                                missionTags: missionTags,
+                                tasks: {}
+                            };
+                            taskColumns.forEach(key => {
+                                const headerText = document.querySelector(`th[data-task-header="${key}"]`).textContent;
+                                if (record[headerText] !== undefined) {
+                                    publisherData.tasks[key] = normalizeDate(record[headerText]);
+                                }
+                            });
+
+                            const existingPub = state.publishers.find(p => p.name === publisherName);
+                            const docRef = existingPub ? doc(state.publishersCollection, existingPub.id) : doc(state.publishersCollection);
+                            batch.set(docRef, publisherData);
+                            existingPub ? updatedCount++ : createdCount++;
+                        }
+                        await batch.commit();
+                        showToast(`匯入完成：${createdCount} 筆新增，${updatedCount} 筆更新`, "success");
+                    } catch (error) {
+                        showToast("檔案處理失敗，請確認格式", "error");
+                        console.error("Error processing XLSX:", error);
+                    } finally {
+                        event.target.value = '';
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function normalizeDate(value) {
+                if (value === null || typeof value === 'undefined') return null;
+                if (typeof value === 'number') { return window.XLSX.SSF.format('yyyy-mm-dd', value); }
+                try {
+                    const date = new Date(value);
+                    if (isNaN(date.getTime())) return null;
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                } catch(e) { return null; }
+            }
+            
+            // --- 表四 & 表五 Card 相關函式 ---
+            function handleTierProgressFilter(e) {
+                const selectedValue = e.target.value;
+                document.querySelectorAll('.progress-card').forEach(card => {
+                    card.style.display = (selectedValue === 'all' || card.dataset.name === selectedValue) ? '' : 'none';
+                });
+            }
+
+            function handleTierCardClick(e) {
+                const statEl = e.target.closest('.clickable-stat');
+                if (!statEl) return;
+
+                const cell = statEl.closest('td');
+                const row = statEl.closest('tr');
+                const card = statEl.closest('.progress-card');
+                
+                const staff = card.dataset.name;
+                const tier = row.dataset.tier;
+                const status = cell.dataset.stage;
+
+                const filtered = state.publishers.filter(p => p.staff === staff && p.tier === tier && p.contactStatus === status);
+
+                document.getElementById('publisher-list-title').textContent = `${staff} - ${tier}級 - ${status}`;
+                const listBody = document.getElementById('publisher-list-body');
+                listBody.innerHTML = filtered.length > 0 
+                    ? filtered.map(p => `<li>${p.name} (${p.contractId || '無編號'})</li>`).join('') 
+                    : '<li>無符合條件的出版社</li>';
+                
+                openModal(dom.publisherListModal, dom.publisherListModalContent);
+            }
+            
+            function createProgressCardHTML(name, data) {
+                 let totalRow = { "母體數": 0 };
+                 contactStatusList.forEach(s => totalRow[s] = 0);
+                 
+                 let tableBody = tierList.map(tier => {
+                     const tierData = data[tier];
+                     if (!tierData || tierData.total === 0) return '';
+                     let stageHtml = '';
+                     contactStatusList.forEach(stage => {
+                         const value = tierData.stages[stage] || 0;
+                         const percentage = tierData.total > 0 ? (value / tierData.total * 100).toFixed(0) : 0;
+                         stageHtml += `<td data-stage="${stage}" data-value="${value}"><span class="clickable-stat">${value}</span><span class="percentage">(${percentage}%)</span></td>`;
+                         totalRow[stage] += value;
+                     });
+                     totalRow["母體數"] += tierData.total;
+                     return `<tr class="border-b" data-tier="${tier}"><td class="px-3 py-3 font-medium text-gray-900 text-left">${tier}級</td>${stageHtml}<td class="font-bold bg-gray-50 text-gray-800">${tierData.total}</td></tr>`;
+                 }).join('');
+
+                 if (totalRow["母體數"] === 0) return '';
+                 return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 progress-card" data-name="${name}"><h3 class="text-xl font-bold text-gray-800 mb-4">${name}</h3><div class="overflow-x-auto"><table class="w-full text-xs text-center text-gray-600"><thead class="bg-gray-100 text-gray-700 uppercase"><tr><th class="px-3 py-3 text-left">分級</th>${contactStatusList.map(s => `<th class="px-3 py-3">${s.replace('已聯繫，','')}</th>`).join('')}<th class="px-3 py-3 bg-gray-200 font-bold">母體數</th></tr></thead><tbody>${tableBody}<tr class="bg-gray-100 font-bold"><td class="px-3 py-4 text-gray-900 text-left">總計</td>${contactStatusList.map(s => `<td>${totalRow[s]}</td>`).join('')}<td class="bg-indigo-100 text-indigo-800">${totalRow["母體數"]}</td></tr></tbody></table></div></div>`;
+            }
+
+            function applyHealthCheck() {
+                document.querySelectorAll('.progress-card').forEach(card => {
+                    const aTierRow = card.querySelector('tr[data-tier="A"]');
+                    if (aTierRow) {
+                        const notContactedCell = aTierRow.querySelector('td[data-stage="未聯繫"]');
+                        const total = parseInt(aTierRow.cells[aTierRow.cells.length - 1].textContent);
+                        const notContactedCount = parseInt(notContactedCell.dataset.value);
+                        const percentage = total > 0 ? (notContactedCount / total) * 100 : 0;
+                        
+                        notContactedCell.classList.remove('health-warning', 'health-critical');
+                        if (percentage >= 50) notContactedCell.classList.add('health-critical');
+                        else if (percentage >= 25) notContactedCell.classList.add('health-warning');
+                    }
+                });
+            }
+
+            // --- Export Handler ---
+            function handleExport() {
+                 const selectedCheckboxes = Array.from(document.querySelectorAll('input[name="export-option"]:checked'));
+                 if(selectedCheckboxes.length === 0) {
+                     showToast("請至少選擇一個要匯出的報表", "warning");
+                     return;
+                 }
+                 
+                 const workbook = window.XLSX.utils.book_new();
+                 
+                 // Info Sheet
+                 const infoSheetData = [
+                    ["報表匯出資訊"],
+                    ["匯出日期", new Date().toLocaleString()],
+                    [""],
+                    ["篩選條件"],
+                    ["搜尋關鍵字", state.filters.search || "(無)"],
+                    ["負責同仁", state.filters.staff === 'all' ? "(全部)" : state.filters.staff],
+                    ["分級", state.filters.tier === 'all' ? "(全部)" : state.filters.tier],
+                    ["聯繫狀態", state.filters.status === 'all' ? "(全部)" : state.filters.status],
+                    [""],
+                    ["匯出的報表"],
+                    ...selectedCheckboxes.map(cb => [cb.nextElementSibling.textContent.trim()])
+                 ];
+                 const infoSheet = window.XLSX.utils.aoa_to_sheet(infoSheetData);
+                 infoSheet['!cols'] = [{ wch: 30 }, { wch: 30 }];
+                 window.XLSX.utils.book_append_sheet(workbook, infoSheet, "匯出資訊");
+
+                // Data Sheets
+                const exportFunctions = {
+                    table1: getPublisherMasterDataForExport,
+                    table2: getTeamSigningDataForExport,
+                    table3: getIndividualSigningDataForExport,
+                    table4: getPublisherTierDataForExport,
+                    table5: getIndividualContactDataForExport,
+                };
+                const sheetNames = {
+                    table1: "表一_出版社母體管理",
+                    table2: "表二_團隊簽約進度",
+                    table3: "表三_個人簽約進度",
+                    table4: "表四_分級聯繫進度",
+                    table5: "表五_個人聯繫進度",
+                };
+
+                selectedCheckboxes.forEach(checkbox => {
+                    const optionValue = checkbox.value;
+                    const data = exportFunctions[optionValue]();
+                    if (data && data.length > 0) {
+                        const worksheet = window.XLSX.utils.json_to_sheet(data);
+                        window.XLSX.utils.book_append_sheet(workbook, worksheet, sheetNames[optionValue]);
+                    }
+                });
+                
+                 window.XLSX.writeFile(workbook, `徵集進度報表_${new Date().toISOString().slice(0,10)}.xlsx`);
+                 showToast("報表匯出成功！", "success");
+            }
+            
+            // --- Export Data Formatting ---
+            function getPublisherMasterDataForExport() {
+                return getFilteredAndSortedData().map(pub => {
+                    let row = {
+                        "出版社名稱": pub.name,
+                        "Notion 紀錄連結": pub.notionUrl || '',
+                        "合約編號": pub.contractId || '',
+                        "負責同仁": pub.staff,
+                        "分級": pub.tier,
+                        "聯繫狀態": pub.contactStatus,
+                        "任務標籤": Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''
+                    };
+                    taskColumns.forEach(key => {
+                        const headerText = document.querySelector(`th[data-task-header="${key}"]`).textContent;
+                        row[headerText] = pub.tasks[key] || '';
+                    });
+                    return row;
+                });
+            }
+
+            function getTeamSigningDataForExport() {
+                const header1 = ["項目", "目標_8月", "目標_9月", "目標_10月", "目標_11月", "目標_12月", "目標_家數合計", "進度_8月", "達成率_8月", "進度_9月", "達成率_9月", "進度_10月", "達成率_10月", "進度_11月", "達成率_11月", "進度_12月", "達成率_12月", "進度_家數合計", "各項目達成率", "缺口家數"];
+                const tableData = [];
+                const bodyRows = document.getElementById('kpi-table-body').rows;
+                const footerRow = document.getElementById('kpi-table-footer').rows[0];
+
+                Array.from(bodyRows).forEach(row => {
+                    const rowData = {};
+                    Array.from(row.cells).forEach((cell, i) => { rowData[header1[i]] = cell.textContent; });
+                    tableData.push(rowData);
+                });
+                
+                const footerData = {};
+                Array.from(footerRow.cells).forEach((cell, i) => { footerData[header1[i]] = cell.textContent; });
+                tableData.push(footerData);
+                return tableData;
+            }
+
+            function getIndividualSigningDataForExport() {
+                return state.analytics.individualSigningStats.map(row => ({
+                    "負責人": row.name,
+                    "負責單位數": row.total,
+                    "已簽約": row.signed,
+                    "簽約率(%)": row.rate.toFixed(1),
+                }));
+            }
+
+            function getPublisherTierDataForExport() {
+                 const flatData = [];
+                 const progressData = state.analytics.tierProgressStats;
+                 Object.keys(progressData).sort().forEach(staffName => {
+                     Object.keys(progressData[staffName]).sort().forEach(tier => {
+                         const tierData = progressData[staffName][tier];
+                         if (tierData.total > 0) {
+                             contactStatusList.forEach(stage => {
+                                 const count = tierData.stages[stage] || 0;
+                                 if (count > 0) {
+                                     flatData.push({ "負責同仁": staffName, "分級": tier, "聯繫狀態": stage, "出版社數量": count });
+                                 }
+                             });
+                         }
+                     });
+                 });
+                 return flatData;
+            }
+
+            function getIndividualContactDataForExport(){
+                return state.analytics.individualContactStats.map(row => ({
+                    "負責人": row.name,
+                    "總單位": row.total,
+                    "已聯繫": row.contacted,
+                    "聯繫率(%)": row.rate.toFixed(0)
+                }));
+            }
+
+        });
+    </script>
+</body>
+</html>
