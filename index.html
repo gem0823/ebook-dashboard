@@ -17,7 +17,6 @@
       getDoc
     } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
 
-    // ✅ 你的 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyA735uIwaSCjz09KwI0SNXgvmTwmk5kzXA",
       authDomain: "ebook-dashboard-a0148.firebaseapp.com",
@@ -33,7 +32,9 @@
 
     async function handleUserRole() {
       const user = auth.currentUser;
-      const userRef = doc(db, "users", user.uid);
+
+      // 🔧 修正路徑：抓巢狀 users 集合
+      const userRef = doc(db, "artifacts/ebook-dashboard/users", user.uid);
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
@@ -97,11 +98,13 @@
   </script>
 
   <style>
-    body { font-family: sans-serif; padding: 2rem; }
+    body { font-family: "Microsoft JhengHei", sans-serif; padding: 2rem; }
     #importSection, #moduleContainer { display: none; margin-top: 2rem; }
     #loginSection { max-width: 400px; }
     input { display: block; margin: 10px 0; width: 100%; padding: 8px; }
     button { padding: 10px 20px; }
+    h1 { font-size: 1.8em; margin-bottom: 1rem; }
+    h2 { margin-top: 1.5rem; }
   </style>
 </head>
 <body>
@@ -117,12 +120,12 @@
   <div id="importSection">
     <h2>📥 匯入資料（僅限 admin）</h2>
     <button>選擇檔案上傳</button>
-    <!-- 這裡你可以加上原本的匯入邏輯 -->
+    <!-- 可以插入你的匯入邏輯 -->
   </div>
 
   <div id="moduleContainer">
     <h2>📊 模組區塊</h2>
-    <p>這裡顯示儀表板模組內容...</p>
+    <p>這裡可以放你的儀表板模組、電子書列表、資料瀏覽模組等</p>
     <button onclick="logout()">登出</button>
   </div>
 </body>
