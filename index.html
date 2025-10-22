@@ -499,20 +499,10 @@
               export: '匯出報表',
               admin: '管理員專區'
           };
+          // *** 修改：只保留一筆範例資料 ***
           const initialData = [
-                { name: "悅文社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
-                { name: "東立出版社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: { task_new_ebook: '2025-08-01' }, notionUrl: null },
-                { name: "臺灣東販", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
-                { name: "長鴻出版社", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "尖端", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "親子天下", staff: "李芷瑄", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "商周", staff: "李芷瑄", tier: "A", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00123", tasks: { task_get_b2b_public: '2025-10-02' }, notionUrl: null },
-                { name: "我識出版", staff: "李芷瑄", tier: "B", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00124", tasks: { task_new_ebook: '2025-10-02', task_get_b2c: '2025-10-02' }, notionUrl: null },
-                { name: "新加坡大學出版社", staff: "李芷瑄", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "晨星出版", staff: "李虹儀", tier: "B", contactStatus: "聯繫中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "時報文化", staff: "李虹儀", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "群學出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null }
-            ];
+              { name: "範例出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: ["範例標籤"], contractId: null, tasks: {}, notionUrl: null }
+          ];
             
           // --- 全域狀態管理 (來自 檔案 2) ---
           const state = {
@@ -738,11 +728,13 @@
               onSnapshot(state.publishersCollection, async (snapshot) => {
                   console.log(`%c[偵錯 5/5] Snapshot 成功接收! (空集合: ${snapshot.empty}, 文件數: ${snapshot.size})`, "color: green; font-weight: bold;");
                   
-                  if (snapshot.empty && initialData.length > 0) {
-                      console.log("資料庫為空，正在植入範例資料...");
-                      await seedInitialData();
-                      return; // Seeding triggers another snapshot
-                  }
+                  // *** 修改：註解掉自動植入資料 ***
+                  // if (snapshot.empty && initialData.length > 0) {
+                  //     console.log("資料庫為空，正在植入範例資料...");
+                  //     await seedInitialData();
+                  //     return; // Seeding triggers another snapshot
+                  // }
+                  
                   state.publishers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                   state.analytics = calculateAllAnalytics(state.publishers);
                   renderAll(); // 觸發渲染
