@@ -25,6 +25,30 @@
   </style>
 </head>
 <body class="bg-light">
+<body class="hold-transition sidebar-mini layout-fixed">
+
+  <!-- 🔐 登入畫面 -->
+  <div id="loginSection" style="max-width: 400px; margin: 80px auto; display: none;">
+    <div class="card card-primary">
+      <div class="card-header"><h3 class="card-title">登入 eBook Dashboard</h3></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" class="form-control" id="loginEmail" placeholder="輸入 Email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">密碼</label>
+          <input type="password" class="form-control" id="loginPassword" placeholder="輸入密碼">
+        </div>
+        <button class="btn btn-primary mt-3 w-100" id="loginBtn">登入</button>
+        <div id="loginError" class="text-danger text-center mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔓 主系統區塊（原有模組區，保持不變） -->
+  <div class="wrapper" id="mainSection" style="display: none;">
+
   <div class="container mt-5" id="login-section">
     <div class="row justify-content-center">
       <div class="col-md-6 col-lg-5">
