@@ -310,7 +310,7 @@
                 </div>
             </section>
             
-            <!-- *** 修正：加入 content-admin 區塊 *** -->
+            <!-- 管理員專區：使用者管理 (移除角色變更功能) -->
             <section id="content-admin" class="content-section hidden">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">使用者帳號管理</h3>
@@ -321,17 +321,18 @@
                                 <tr>
                                     <th scope="col" class="px-6 py-3">使用者 Email</th>
                                     <th scope="col" class="px-6 py-3">目前角色</th>
-                                    <th scope="col" class="px-6 py-3">變更角色</th>
-                                    <th scope="col" class="px-6 py-3">操作</th>
+                                    <!-- 移除 "變更角色" 和 "操作" 欄位 -->
                                 </tr>
                             </thead>
                             <tbody id="user-list-body">
                                 <!-- User list will be populated here -->
-                                <tr><td colspan="4" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>
+                                <!-- 調整 colspan -->
+                                <tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>
                             </tbody>
                         </table>
                     </div>
-                     <p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號請至 Firebase Authentication 主控台操作。</p>
+                    <!-- 更新提示文字 -->
+                     <p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號或變更權限，請洽林芝(至 Firebase Authentication 主控台操作。)</p>
                 </div>
             </section>
                 
@@ -605,7 +606,7 @@
                       
                       // 5. 初始化儀表板的事件監聽器 (只應執行一次)
                       console.log("[偵錯 3/5] 正在設定儀表板事件監聽器...");
-                      setupEventListeners(); // 包含使用者管理的事件監聽
+                      setupEventListeners(); // 移除使用者管理的事件監聽
                       setupFilters();
                       switchContent('publisherMaster'); // 預設顯示主頁
                       
@@ -997,11 +998,11 @@
                   }
               });
               
-              // *** 新增：使用者列表的事件監聽 (事件委派) ***
-              if (userListBody) {
-                  userListBody.addEventListener('change', handleRoleChange);
-                  userListBody.addEventListener('click', handleUserAction);
-              }
+              // *** 移除：使用者列表的事件監聽 ***
+              // if (userListBody) {
+              //     userListBody.addEventListener('change', handleRoleChange);
+              //     userListBody.addEventListener('click', handleUserAction);
+              // }
 
 
               // Master List Filters
@@ -1162,18 +1163,20 @@
               }
           }
           
-          // --- *** 新增：使用者管理相關函數 *** ---
+          // --- *** 使用者管理相關函數 (已簡化) *** ---
           async function fetchUsers() {
               if (state.auth.currentUser) {
                  // 檢查是否為 admin (雖然理論上只有 admin 能看到這頁，多一層保險)
                  const currentUserDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", state.auth.currentUser.uid);
                  const currentUserDoc = await getDoc(currentUserDocRef);
                  if (!currentUserDoc.exists() || currentUserDoc.data().role !== 'admin') {
-                    userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-500">權限不足，無法載入使用者清單。</td></tr>';
+                    // 調整 colspan
+                    userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-red-500">權限不足，無法載入使用者清單。</td></tr>';
                     return;
                  }
 
-                 userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>';
+                 // 調整 colspan
+                 userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>';
                  try {
                      // 取得 users 集合的所有文件 (需要 Firestore 規則允許 admin 讀取)
                      const usersCollectionRef = collection(state.db, "artifacts", "ebook-dashboard", "users");
@@ -1191,7 +1194,8 @@
                      renderUserList(users);
                  } catch (error) {
                      console.error("載入使用者列表時發生錯誤:", error);
-                     userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-500">載入使用者清單失敗，請檢查主控台錯誤訊息與 Firestore 安全規則。</td></tr>';
+                     // 調整 colspan
+                     userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-red-500">載入使用者清單失敗，請檢查主控台錯誤訊息與 Firestore 安全規則。</td></tr>';
                      if (error.code === 'permission-denied') {
                          showAlert("權限不足，無法讀取使用者清單。請確認 Firestore 安全規則是否已更新並允許管理員讀取 users 集合。");
                      }
@@ -1199,94 +1203,29 @@
               }
           }
 
+          // 簡化 renderUserList，只顯示 Email 和角色
           function renderUserList(users) {
               if (users.length === 0) {
-                 userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500">目前沒有其他使用者。</td></tr>';
+                 // 調整 colspan
+                 userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前沒有其他使用者。</td></tr>';
                  return;
               }
               
               userListBody.innerHTML = users.map((user, index) => {
-                 // 管理員不能更改自己的角色
                  const isCurrentUser = user.id === state.auth.currentUser.uid; 
                  return `
                  <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b" data-userid="${user.id}">
                      <td class="px-6 py-4 font-medium text-gray-900">${user.email} ${isCurrentUser ? '(您)' : ''}</td>
                      <td class="px-6 py-4">${user.role}</td>
-                     <td class="px-6 py-4">
-                         <select class="role-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" ${isCurrentUser ? 'disabled' : ''}>
-                             <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
-                             <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
-                         </select>
-                     </td>
-                     <td class="px-6 py-4">
-                         <button class="save-role-btn hidden text-sm bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600 disabled:opacity-50" ${isCurrentUser ? 'disabled' : ''}>
-                             儲存
-                         </button>
-                     </td>
+                     <!-- 移除變更角色和操作欄位 -->
                  </tr>`;
               }).join('');
           }
 
-          function handleRoleChange(e) {
-              if (e.target.classList.contains('role-select')) {
-                  const row = e.target.closest('tr');
-                  const saveBtn = row.querySelector('.save-role-btn');
-                  saveBtn.classList.remove('hidden'); // 顯示儲存按鈕
-              }
-          }
-
-          async function handleUserAction(e) {
-               if (e.target.classList.contains('save-role-btn')) {
-                   const row = e.target.closest('tr');
-                   const userId = row.dataset.userid;
-                   const select = row.querySelector('.role-select');
-                   const newRole = select.value;
-                   
-                   e.target.disabled = true;
-                   e.target.textContent = '儲存中...';
-
-                   await updateUserRole(userId, newRole, e.target);
-               }
-          }
-
-          async function updateUserRole(userId, newRole, buttonElement) {
-              if (!userId || !newRole) return;
-              
-              // 防止管理員更改自己的角色
-              if (userId === state.auth.currentUser.uid) {
-                  showAlert("您不能更改自己的角色。");
-                  buttonElement.classList.add('hidden'); // 隱藏按鈕
-                  buttonElement.disabled = false;
-                  buttonElement.textContent = '儲存';
-                  // 重設下拉選單? (可選)
-                  const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", userId);
-                  const userDoc = await getDoc(userDocRef);
-                  if (userDoc.exists()) {
-                      const select = buttonElement.closest('tr').querySelector('.role-select');
-                      select.value = userDoc.data().role;
-                  }
-                  return;
-              }
-
-              const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", userId);
-              try {
-                  await updateDoc(userDocRef, { role: newRole });
-                  showToast("角色更新成功！", "success");
-                  buttonElement.classList.add('hidden'); // 隱藏按鈕
-                  // 更新表格中的角色顯示 (找到對應的儲存格更新文字)
-                  const roleCell = buttonElement.closest('tr').cells[1]; // 第二個儲存格
-                  roleCell.textContent = newRole;
-              } catch (error) {
-                  console.error("更新角色失敗:", error);
-                  showToast("角色更新失敗，請檢查權限或主控台錯誤。", "error");
-                  if (error.code === 'permission-denied') {
-                      showAlert("權限不足，無法更新角色。請確認 Firestore 安全規則。");
-                  }
-              } finally {
-                  buttonElement.disabled = false;
-                  buttonElement.textContent = '儲存';
-              }
-          }
+          // *** 移除 handleRoleChange, handleUserAction, updateUserRole ***
+          // function handleRoleChange(e) { ... }
+          // async function handleUserAction(e) { ... }
+          // async function updateUserRole(userId, newRole, buttonElement) { ... }
 
 
           // --- Modal & UI Helpers ---
