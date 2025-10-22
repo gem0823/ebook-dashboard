@@ -1,22 +1,83 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
   <title>eBook Dashboard</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+  />
+  <style>
+    .admin-only { display: none; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container mt-5" id="login-section">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+          <div class="card-body">
+            <h3 class="text-center mb-4">eBook Dashboard 登入</h3>
+            <div class="mb-3">
+              <label for="loginEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="loginEmail" />
+            </div>
+            <div class="mb-3">
+              <label for="loginPassword" class="form-label">密碼</label>
+              <input type="password" class="form-control" id="loginPassword" />
+            </div>
+            <button class="btn btn-primary w-100" id="loginBtn">登入</button>
+            <div class="mt-3 text-danger text-center" id="loginError"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- 主控制面板區塊 -->
+  <div id="main-section" class="container-fluid d-none">
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <h2>eBook Dashboard</h2>
+      <div>
+        👤 <span id="userEmailDisplay"></span>（<span id="userRoleDisplay"></span>）
+        <button id="logoutBtn" class="btn btn-outline-secondary btn-sm ms-3">登出</button>
+      </div>
+    </div>
+    <hr />
+
+    <!-- admin 專屬功能按鈕 -->
+    <div class="admin-only mb-3">
+      <button class="btn btn-success" id="addPublisherBtn">➕ 新增出版社</button>
+      <button class="btn btn-primary" id="importExcelBtn">📥 匯入 Excel</button>
+      <button class="btn btn-secondary" id="openUserModal">👥 使用者管理</button>
+    </div>
+
+
+  </div> 
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyA735uIwaSCjz09KwI0SNXgvmTwmk5kzXA",
       authDomain: "ebook-dashboard-a0148.firebaseapp.com",
@@ -26,107 +87,60 @@
       appId: "1:127405787765:web:72631dc3d362466660c63c"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    async function handleUserRole() {
-      const user = auth.currentUser;
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-      // 🔧 修正路徑：抓巢狀 users 集合
-      const userRef = doc(db, "artifacts/ebook-dashboard/users", user.uid);
-      const userSnap = await getDoc(userRef);
+    loginBtn.addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const loginError = document.getElementById("loginError");
 
-      if (!userSnap.exists()) {
-        alert("您的帳號尚未授權使用此系統");
-        await signOut(auth);
-        location.reload();
-        return;
-      }
-
-      const role = userSnap.data()?.role;
-      console.log("使用者角色：", role);
-
-      if (role === "admin") {
-        showAdminUI();
-      } else if (role === "editor") {
-        showEditorUI();
-      } else {
-        alert("您沒有足夠權限進入此系統");
-        await signOut(auth);
-        location.reload();
-      }
-    }
-
-    function showAdminUI() {
-      document.getElementById("loginSection").style.display = "none";
-      document.getElementById("importSection").style.display = "block";
-      document.getElementById("moduleContainer").style.display = "block";
-    }
-
-    function showEditorUI() {
-      document.getElementById("loginSection").style.display = "none";
-      document.getElementById("importSection").style.display = "none";
-      document.getElementById("moduleContainer").style.display = "block";
-    }
-
-    window.login = async function () {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
       try {
-        await signInWithEmailAndPassword(auth, email, password);
-        await handleUserRole();
-      } catch (error) {
-        alert("登入失敗：" + error.message);
-      }
-    };
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        const uid = cred.user.uid;
 
-    window.logout = async function () {
-      await signOut(auth);
-      location.reload();
-    };
+        // 🔍 取得角色
+        const doc = await db
+          .collection("artifacts")
+          .doc("ebook-dashboard")
+          .collection("users")
+          .doc(uid)
+          .get();
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await handleUserRole();
-      } else {
-        document.getElementById("loginSection").style.display = "block";
-        document.getElementById("importSection").style.display = "none";
-        document.getElementById("moduleContainer").style.display = "none";
+        if (!doc.exists) {
+          loginError.textContent = "您的帳號尚未授權使用此系統";
+          await auth.signOut();
+          return;
+        }
+
+        const role = doc.data().role;
+
+        // 顯示主畫面 & 帳號角色資訊
+        document.getElementById("login-section").classList.add("d-none");
+        document.getElementById("main-section").classList.remove("d-none");
+        document.getElementById("userEmailDisplay").textContent = email;
+        document.getElementById("userRoleDisplay").textContent = role;
+
+        // 根據角色切換 UI 權限
+        if (role === "admin") {
+          document.querySelectorAll(".admin-only").forEach(el => {
+            el.style.display = "inline-block";
+          });
+        }
+
+      } catch (err) {
+        loginError.textContent = "登入失敗：" + err.message;
       }
     });
+
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut().then(() => location.reload());
+    });
   </script>
-
-  <style>
-    body { font-family: "Microsoft JhengHei", sans-serif; padding: 2rem; }
-    #importSection, #moduleContainer { display: none; margin-top: 2rem; }
-    #loginSection { max-width: 400px; }
-    input { display: block; margin: 10px 0; width: 100%; padding: 8px; }
-    button { padding: 10px 20px; }
-    h1 { font-size: 1.8em; margin-bottom: 1rem; }
-    h2 { margin-top: 1.5rem; }
-  </style>
-</head>
-<body>
-  <h1>eBook Dashboard</h1>
-
-  <div id="loginSection">
-    <h2>登入</h2>
-    <input id="email" type="email" placeholder="Email" />
-    <input id="password" type="password" placeholder="Password" />
-    <button onclick="login()">登入</button>
-  </div>
-
-  <div id="importSection">
-    <h2>📥 匯入資料（僅限 admin）</h2>
-    <button>選擇檔案上傳</button>
-    <!-- 可以插入你的匯入邏輯 -->
-  </div>
-
-  <div id="moduleContainer">
-    <h2>📊 模組區塊</h2>
-    <p>這裡可以放你的儀表板模組、電子書列表、資料瀏覽模組等</p>
-    <button onclick="logout()">登出</button>
-  </div>
 </body>
 </html>
+
