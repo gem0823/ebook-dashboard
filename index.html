@@ -57,6 +57,10 @@
     #toast.show { transform: translateX(0); }
     /* Checkbox column width */
     .checkbox-col { width: 3rem; text-align: center; }
+    /* Row number column width and style */
+    .row-number-col { width: 3.5rem; text-align: center; background-color: #f9fafb; font-weight: 500; color: #6b7280; }
+    /* Column letter header style */
+    .col-letter-header th { background-color: #f3f4f6; font-weight: bold; text-align: center; }
   </style>
   
   <!-- 整合：顯示/隱藏 的樣式 -->
@@ -176,11 +180,17 @@
                     <div class="overflow-x-auto max-h-[65vh] table-container">
                         <table class="w-full text-sm text-left text-gray-600 border-collapse">
                             <thead class="bg-gray-50 text-xs text-gray-700 uppercase sticky top-0 z-10 shadow-sm">
+                                <!-- 新增：欄位字母標頭 -->
+                                <tr id="col-letter-header" class="col-letter-header">
+                                    <!-- Placeholder cell(s) for checkbox and row number -->
+                                </tr>
                                 <tr>
                                     <!-- 新增：全選 Checkbox -->
                                     <th class="px-3 py-3 border-b border-gray-200 checkbox-col admin-only" style="display: none;">
                                       <input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                                     </th>
+                                    <!-- 新增：列位數字標頭 -->
+                                     <th class="px-3 py-3 border-b border-gray-200 row-number-col">#</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200">Notion 紀錄</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="name">出版社名稱</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contractId">合約編號</th>
@@ -204,7 +214,7 @@
                             </thead>
                             <tbody id="master-list-body">
                                 <!-- 調整 colspan -->
-                                <tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-gray-500">正在等待登入...</td></tr>
+                                <tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-gray-500">正在等待登入...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -549,6 +559,7 @@
               // *** 新增：刪除相關按鈕 ***
               selectAllCheckbox: document.getElementById('select-all-checkbox'),
               deleteSelectedBtn: document.getElementById('delete-selected-btn'),
+              colLetterHeader: document.getElementById('col-letter-header'), // *** 新增：欄位字母標頭列 ***
           };
           // (檔案 1 的 dom 元素)
           const loginSection = document.getElementById('loginSection');
@@ -630,6 +641,9 @@
                            }
                       });
                       
+                      // *** 新增：更新字母標頭的 Colspan ***
+                      updateColLetterHeaderColspan();
+                      
                       // *** 防止重複初始化 ***
                       if (state.isDashboardInitialized) {
                           console.log("[偵錯] 儀表板已初始化，跳過重複設定。");
@@ -640,6 +654,7 @@
                                else if (el.tagName === 'TH' || el.tagName === 'TD') { el.style.display = displayStyleTable; }
                                else { el.style.display = displayStyleBlock; }
                           });
+                          updateColLetterHeaderColspan(); // 重新整理也要更新 Colspan
                           renderAll(); // 重新渲染以確保 checkbox 顯示
                           return;
                       }
@@ -651,6 +666,7 @@
                       
                       // 這是 檔案 2 的資料庫路徑
                       state.publishersCollection = collection(state.db, `/artifacts/${state.appId}/public/data/publishers`);
+                      renderColLetterHeader(); // *** 新增：渲染字母標頭 ***
                       listenToPublishers(); // <-- 在此啟動儀表板
                       
                       // 5. 初始化儀表板的事件監聽器 (只應執行一次)
@@ -734,7 +750,7 @@
               }, (error) => {
                   console.error("%c[偵錯 失敗] Firebase Snapshot 錯誤:", "color: red; font-weight: bold;", error);
                    // 調整 colspan
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-red-500">讀取資料時發生錯誤。請檢查 Firestore 安全規則或主控台錯誤訊息。</td></tr>`;
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-red-500">讀取資料時發生錯誤。請檢查 Firestore 安全規則或主控台錯誤訊息。</td></tr>`;
               });
           }
 
@@ -770,7 +786,7 @@
               } catch (error) {
                   console.error("%c[偵錯 失敗] 渲染 (Render) 過程中發生錯誤:", "color: red; font-weight: bold;", error);
                   // 調整 colspan
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-red-500">渲染資料時發生錯誤: ${error.message}</td></tr>`;
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-red-500">渲染資料時發生錯誤: ${error.message}</td></tr>`;
               }
           }
           
@@ -779,11 +795,11 @@
               if (data.length === 0) {
                   const message = state.publishers.length > 0 ? "沒有符合篩選條件的結果。" : "資料庫中尚無資料，請新增或匯入。";
                    // 調整 colspan
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-gray-500">${message}</td></tr>`;
                   return;
               }
-              // 產生 HTML，包含 checkbox (只有 admin 看得到)
-              dom.masterListBody.innerHTML = data.map(pub => createPublisherRowHtml(pub)).join('');
+              // *** 修改：傳入索引 i ***
+              dom.masterListBody.innerHTML = data.map((pub, i) => createPublisherRowHtml(pub, i)).join('');
               
               // *** 渲染後立即更新 checkbox 顯示狀態 ***
                const checkBoxes = dom.masterListBody.querySelectorAll('.row-checkbox');
@@ -791,6 +807,11 @@
                checkBoxes.forEach(cb => {
                    const cell = cb.closest('td');
                    if (cell) cell.style.display = displayStyleTable;
+               });
+               // *** 新增：更新列位數字欄的顯示狀態 ***
+               const rowNumberCells = dom.masterListBody.querySelectorAll('.row-number-col');
+               rowNumberCells.forEach(cell => {
+                    cell.style.display = 'table-cell'; // 列位數字始終顯示
                });
           }
           
@@ -1007,8 +1028,8 @@
           }
           
           // --- Helper 函式 ---
-          // 修改 createPublisherRowHtml 加入 checkbox 和 delete button (admin only)
-          function createPublisherRowHtml(pub) {
+          // 修改 createPublisherRowHtml 加入列位數字
+          function createPublisherRowHtml(pub, index) {
               const tasks = pub.tasks || {};
               const taskCells = taskColumns.map(taskKey => `<td class="px-3 py-2 border-b border-gray-200"><input type="date" class="task-date-input" data-task="${taskKey}" value="${tasks[taskKey] || ''}"></td>`).join('');
               const isSelected = state.selectedPublisherIds.has(pub.id);
@@ -1018,6 +1039,8 @@
                   <td class="px-3 py-2 border-b border-gray-200 checkbox-col admin-only" style="display: ${state.currentRole === 'admin' ? 'table-cell' : 'none'};">
                     <input type="checkbox" class="row-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="${pub.id}" ${isSelected ? 'checked' : ''}>
                   </td>
+                  <!-- 新增：列位數字 -->
+                  <td class="px-3 py-2 border-b border-gray-200 row-number-col">${index + 1}</td>
                   <td class="px-3 py-2 border-b border-gray-200">
                       <div class="flex items-center space-x-1">
                           <input type="url" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="notionUrl" value="${pub.notionUrl || ''}" placeholder="貼上連結...">
@@ -1087,6 +1110,44 @@
               });
 
               updateDeleteSelectedButtonState(); // 同步更新刪除按鈕狀態
+          }
+          
+          // *** 新增：欄位索引轉字母 ***
+          function columnIndexToLetter(index) {
+                let letter = '';
+                let tempIndex = index;
+                while (tempIndex >= 0) {
+                    letter = String.fromCharCode((tempIndex % 26) + 65) + letter;
+                    tempIndex = Math.floor(tempIndex / 26) - 1;
+                }
+                return letter;
+          }
+
+          // *** 新增：渲染欄位字母標頭 ***
+          function renderColLetterHeader() {
+               if (!dom.colLetterHeader) return;
+               const headerCells = document.querySelector('#content-publisher-master thead tr:last-child').cells;
+               let letterHtml = '';
+               // First cell spans checkbox (if admin) and row number
+               const firstColspan = (state.currentRole === 'admin' ? 1 : 0) + 1;
+               letterHtml += `<th colspan="${firstColspan}" class="px-3 py-2 border-b border-gray-200"></th>`; 
+               
+               let letterIndex = 0;
+               // Start from the actual data columns
+               for (let i = firstColspan; i < headerCells.length; i++) {
+                   letterHtml += `<th class="px-3 py-2 border-b border-gray-200">${columnIndexToLetter(letterIndex)}</th>`;
+                   letterIndex++;
+               }
+               dom.colLetterHeader.innerHTML = letterHtml;
+          }
+           // *** 新增：更新欄位字母標頭的 Colspan (登入/登出時) ***
+          function updateColLetterHeaderColspan() {
+               if (!dom.colLetterHeader) return;
+               const firstCell = dom.colLetterHeader.cells[0];
+               if (firstCell) {
+                  const firstColspan = (state.currentRole === 'admin' ? 1 : 0) + 1;
+                  firstCell.colSpan = firstColspan;
+               }
           }
 
           // --- 事件監聽器設定 (來自 檔案 2) ---
@@ -1233,7 +1294,7 @@
               const row = target.closest('tr');
               if (!row) return;
               const docId = row.dataset.id;
-              const publisherName = row.cells[2].textContent; // 假設第二欄是名稱
+              const publisherName = row.cells[3].textContent; // *** 修改：名稱現在是第 4 欄 (索引 3) ***
 
               if (target.closest('.open-notion-btn')) {
                   const url = row.querySelector('[data-field="notionUrl"]').value;
@@ -1289,8 +1350,10 @@
 
           function cancelRowChanges(row, docId) {
               const originalData = state.publishers.find(p => p.id === docId);
-              if (originalData) {
-                  const newRowHtml = createPublisherRowHtml(originalData);
+              const index = getFilteredAndSortedData().findIndex(p => p.id === docId); // *** 新增：取得正確索引 ***
+              if (originalData && index !== -1) { // *** 修改：檢查索引 ***
+                  // *** 修改：傳入索引 ***
+                  const newRowHtml = createPublisherRowHtml(originalData, index); 
                   const tempDiv = document.createElement('div');
                   tempDiv.innerHTML = `<table><tbody>${newRowHtml}</tbody></table>`;
                   const newRow = tempDiv.querySelector('tr');
@@ -1803,8 +1866,10 @@
             // --- Export Data Formatting (保持不變) ---
             // ... getPublisherMasterDataForExport, getTeamSigningDataForExport, etc. ...
              function getPublisherMasterDataForExport() {
-                return getFilteredAndSortedData().map(pub => {
+                 // *** 修改：加入列位 ***
+                return getFilteredAndSortedData().map((pub, index) => {
                     let row = {
+                        "#": index + 1, // 列位
                         "出版社名稱": pub.name,
                         "Notion 紀錄連結": pub.notionUrl || '',
                         "合約編號": pub.contractId || '',
@@ -1813,12 +1878,28 @@
                         "聯繫狀態": pub.contactStatus,
                         "任務標籤": Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''
                     };
-                    taskColumns.forEach(key => {
+                    taskColumns.forEach((key, colIndex) => { // 加入 colIndex
                         const headerEl = document.querySelector(`th[data-task-header="${key}"]`);
                         const headerText = headerEl ? headerEl.textContent : key;
-                        row[headerText] = pub.tasks[key] || '';
+                        // *** 修改：加入字母標頭 ***
+                        const letterHeader = `${columnIndexToLetter(colIndex + 7)}_${headerText}`; // 7 = 前面的固定欄位數
+                        row[letterHeader] = pub.tasks[key] || '';
                     });
-                    return row;
+                     // *** 新增：為固定欄位加上字母標頭 ***
+                     row[`A_Notion 紀錄連結`] = row['Notion 紀錄連結']; delete row['Notion 紀錄連結'];
+                     row[`B_出版社名稱`] = row['出版社名稱']; delete row['出版社名稱'];
+                     row[`C_合約編號`] = row['合約編號']; delete row['合約編號'];
+                     row[`D_負責同仁`] = row['負責同仁']; delete row['負責同仁'];
+                     row[`E_分級`] = row['分級']; delete row['分級'];
+                     row[`F_聯繫狀態`] = row['聯繫狀態']; delete row['聯繫狀態'];
+                     row[`G_任務標籤`] = row['任務標籤']; delete row['任務標籤'];
+                     
+                     // 調整順序，將 '#' 放第一
+                     const orderedRow = { '#': row['#'] };
+                     delete row['#'];
+                     Object.assign(orderedRow, row);
+                     
+                    return orderedRow;
                 });
             }
 
@@ -1887,6 +1968,4 @@
   </script>
 </body>
 </html>
-
-
 
