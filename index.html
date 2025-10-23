@@ -9,11 +9,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
-  
+
   <!-- 檔案 2: 儀表板樣式 (Tailwind & SheetJS) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  
+
   <!-- 檔案 2: 儀表板自訂樣式 -->
   <style>
     /* 使用 Inter 和 Noto Sans TC 字體 */
@@ -22,6 +22,7 @@
         font-family: 'Inter', 'Noto Sans TC', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden; /* 防止水平滾動 */
     }
     /* ... (檔案 2 的所有其他 CSS 樣式) ... */
     .content-section { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
@@ -55,15 +56,68 @@
     .row-dirty { background-color: #fef9c3 !important; }
     #toast { position: fixed; top: 20px; right: 20px; transform: translateX(200%); transition: transform 0.5s ease-in-out; z-index: 100; }
     #toast.show { transform: translateX(0); }
+    /* Checkbox column width */
+    .checkbox-col { width: 3rem; text-align: center; }
+    /* Row number column width and style */
+    .row-number-col { width: 3.5rem; text-align: center; background-color: #f9fafb; font-weight: 500; color: #6b7280; }
+    /* Column letter header style */
+    .col-letter-header th { background-color: #f3f4f6; font-weight: bold; text-align: center; }
+
+    /* --- 調整：欄寬調整 --- */
+    .col-notion { max-width: 150px; min-width: 120px; } /* A欄: 縮小寬度 */
+    .col-publisher-name { min-width: 12em; white-space: normal !important; word-break: break-word; } /* B欄: 最小寬度約6個中文字 */
+    .col-contract-id { min-width: 130px; } /* C欄: 最小寬度 */
+    .col-staff { min-width: 100px; }       /* D欄: 最小寬度 */
+    .col-tier { min-width: 60px; }        /* E欄: 最小寬度 */
+    .col-mission-tags { min-width: 150px; } /* 任務標籤欄位 */
+    .col-action { min-width: 120px; } /* 操作欄位 */
+
+    /* 確保 input 和 select 不要撐開 td */
+     #master-list-body td input, #master-list-body td select { max-width: 100%; box-sizing: border-box; }
+
+     /* --- 新增：側邊欄收合樣式 --- */
+    #sidebar { transition: width 0.3s ease-in-out; width: 16rem; /* 預設寬度 w-64 */ }
+    #sidebar.collapsed { width: 4rem; /* 收合寬度 w-16 */ }
+    #sidebar.collapsed .sidebar-text { display: none; }
+    #sidebar.collapsed .sidebar-header-text { display: none; }
+    #sidebar.collapsed .sidebar-footer > *:not(#logoutBtn):not(#db-status) { display: none; } /* 收合時隱藏 footer 文字 */
+    #sidebar.collapsed #logoutBtn span { display: none; } /* 隱藏登出按鈕文字 */
+     #sidebar.collapsed #logoutBtn { width: auto; padding: 0.5rem; } /* 調整登出按鈕大小 */
+     #sidebar.collapsed #userRoleDisplay { display: none; }
+     #sidebar.collapsed #db-status { font-size: 0.7rem; } /* 縮小狀態文字 */
+     #sidebar.collapsed #nav-admin svg, /* 選單圖示置中 */
+     #sidebar.collapsed #nav-export svg,
+     #sidebar.collapsed #nav-individual-contact svg,
+     #sidebar.collapsed #nav-publisher-tier svg,
+     #sidebar.collapsed #nav-individual-signing svg,
+     #sidebar.collapsed #nav-team-signing svg,
+     #sidebar.collapsed #nav-publisher-master svg { margin-right: 0 !important; }
+     #sidebar.collapsed nav ul a { justify-content: center; } /* 圖示置中 */
+
+     #mainContent { transition: margin-left 0.3s ease-in-out; margin-left: 16rem; /* 預設 margin */ }
+     body.sidebar-collapsed #mainContent { margin-left: 4rem; /* 收合時 margin */ }
+
+     /* 漢堡按鈕樣式 */
+     #sidebar-toggle {
+        background: none; border: none; cursor: pointer; padding: 0.5rem;
+        position: absolute; top: 1.25rem; right: -2.5rem; /* 移到側邊欄外右側 */
+        background-color: white; border-radius: 0 0.375rem 0.375rem 0; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        z-index: 10;
+     }
+      #sidebar.collapsed #sidebar-toggle { right: -2.5rem; /* 收合時仍在外面 */ }
+     #sidebar-toggle svg { width: 1.5rem; height: 1.5rem; color: #4b5563; }
+
+
   </style>
-  
+
   <!-- 整合：顯示/隱藏 的樣式 -->
   <style>
     #loginSection { display: flex; }
     #mainSection { display: none; }
   </style>
 </head>
-<body class="bg-gray-100 antialiased">
+<!-- 新增 class="sidebar-collapsed" 預設收合 -->
+<body class="bg-gray-100 antialiased sidebar-collapsed">
 
   <!-- 🔐 登入畫面區塊 (來自 檔案 1) -->
   <!-- 使用 Tailwind 居中，使用 AdminLTE 樣式化卡片 -->
@@ -87,50 +141,64 @@
 
   <!-- 🧭 主系統區塊 (來自 檔案 2) -->
   <div id="mainSection" class="flex h-screen">
-    
+
     <!-- 左側導覽選單 (來自 檔案 2，整合了 檔案 1 的登出按鈕) -->
-    <aside class="w-64 bg-white shadow-md flex flex-col shrink-0">
-        <div class="p-6 border-b">
-            <h1 class="text-xl font-bold text-gray-800">圖服部儀表板</h1>
-            <p class="text-sm text-gray-500 mt-1">中文電子書徵集進度</p>
+    <!-- 新增 id="sidebar" -->
+    <aside id="sidebar" class="bg-white shadow-md flex flex-col shrink-0 relative">
+        <!-- 新增漢堡按鈕 -->
+        <button id="sidebar-toggle" title="收合/展開選單">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+        </button>
+        <div class="p-6 border-b flex items-center gap-2">
+             <!-- <h1 class="text-xl font-bold text-gray-800 sidebar-text">圖服部儀表板</h1> -->
+             <span class="text-xl font-bold text-gray-800">📊</span> <!-- Icon替代文字 -->
+             <div class="sidebar-header-text">
+                 <h1 class="text-xl font-bold text-gray-800">圖服部儀表板</h1>
+                 <p class="text-sm text-gray-500 mt-1">中文電子書徵集進度</p>
+             </div>
         </div>
-        <nav class="flex-1 px-4 py-6">
+        <nav class="flex-1 px-4 py-6 overflow-y-auto">
             <ul class="space-y-2">
-                <!-- 檔案 2 的導覽連結 -->
-                <li><a href="#" id="nav-publisher-master" class="flex items-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>出版社母體管理</a></li>
-                <li><a href="#" id="nav-team-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>團隊簽約進度</a></li>
-                <li><a href="#" id="nav-individual-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 11h-4.17a6.12 6.12 0 0 1-5.6-3.07"/></svg>個人簽約進度</a></li>
-                <li><a href="#" id="nav-publisher-tier" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v4"/><path d="m15 13-3-3-3 3"/></svg>出版社分級聯繫進度</a></li>
-                <li><a href="#" id="nav-individual-contact" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" y1="2" x2="8" y2="4"/><line x1="16" y1="2" x2="16" y2="4"/></svg>個人聯繫進度</a></li>
-                
+                <!-- 檔案 2 的導覽連結，加入 sidebar-text class -->
+                <li><a href="#" id="nav-publisher-master" class="flex items-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg><span class="sidebar-text">出版社母體管理</span></a></li>
+                <li><a href="#" id="nav-team-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-text">團隊簽約進度</span></a></li>
+                <li><a href="#" id="nav-individual-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 11h-4.17a6.12 6.12 0 0 1-5.6-3.07"/></svg><span class="sidebar-text">個人簽約進度</span></a></li>
+                <li><a href="#" id="nav-publisher-tier" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v4"/><path d="m15 13-3-3-3 3"/></svg><span class="sidebar-text">出版社分級聯繫進度</span></a></li>
+                <li><a href="#" id="nav-individual-contact" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" y1="2" x2="8" y2="4"/><line x1="16" y1="2" x2="16" y2="4"/></svg><span class="sidebar-text">個人聯繫進度</span></a></li>
+
                 <li class="admin-only" style="display: none;">
                   <a href="#" id="nav-admin" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11V16"/><path d="M12 8H12.01"/><path d="M21.17 16.83A9.95 9.95 0 0 0 22 12c0-5.52-4.48-10-10-10S2 6.48 2 12a9.95 9.95 0 0 0 .83 4.17L2 22l5.17-1.17Z"/></svg>
-                    管理員專區
+                    <svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11V16"/><path d="M12 8H12.01"/><path d="M21.17 16.83A9.95 9.95 0 0 0 22 12c0-5.52-4.48-10-10-10S2 6.48 2 12a9.95 9.95 0 0 0 .83 4.17L2 22l5.17-1.17Z"/></svg>
+                    <span class="sidebar-text">管理員專區</span>
                   </a>
                 </li>
 
-                <li class="border-t pt-2 mt-2"><a href="#" id="nav-export" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>匯出報表</a></li>
+                <li class="border-t pt-2 mt-2"><a href="#" id="nav-export" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5 mr-3 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="sidebar-text">匯出報表</span></a></li>
             </ul>
         </nav>
-        
+
         <!-- 來自 檔案 1 的登入資訊/登出按鈕 -->
-        <div class="p-4 border-t mt-auto">
+        <div class="p-4 border-t mt-auto sidebar-footer">
             <div id="userRoleDisplay" class="text-sm font-medium text-gray-700 mb-2 truncate">
               未登入
             </div>
-            <button id="logoutBtn" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 text-sm">
-              登出
+             <!-- 修改登出按鈕樣式 -->
+            <button id="logoutBtn" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 text-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" > <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /> </svg>
+              <span class="sidebar-text">登出</span>
             </button>
-            
+
             <!-- 來自 檔案 2 的頁尾資訊 -->
-            <p class="text-xs text-gray-500 mt-4">版本 v4.6.0 (Optimized)</p>
-            <p class="text-xs text-gray-500">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
+            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.6.0 (Optimized)</p>
+            <p class="text-xs text-gray-500 sidebar-text">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
         </div>
     </aside>
 
     <!-- 右側主內容區 (來自 檔案 2) -->
-    <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <!-- 新增 id="mainContent" -->
+    <main id="mainContent" class="flex-1 p-6 lg:p-8 overflow-y-auto">
         <header class="mb-8">
             <h2 id="main-title" class="text-3xl font-bold text-gray-900">出版社母體管理</h2>
         </header>
@@ -142,6 +210,11 @@
                     <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                         <h3 class="text-lg font-semibold text-gray-800">目標出版社清單</h3>
                         <div class="flex flex-wrap items-center gap-2">
+                            <!-- 新增：刪除選取項目按鈕 (Admin Only) -->
+                             <button id="delete-selected-btn" class="admin-only bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 inline-flex items-center text-sm" style="display: none;">
+                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                刪除選取
+                            </button>
                             <button id="add-publisher-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 inline-flex items-center text-sm">
                                 <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 新增出版社
@@ -165,18 +238,33 @@
                         <select id="status-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
                         <button id="clear-filters-btn" class="text-sm text-gray-600 hover:text-indigo-600">清除篩選</button>
                     </div>
-                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表一&gt;</h4>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-sm font-semibold text-gray-500 ">&lt;表一&gt;</h4>
+                        <!-- 新增：顯示筆數資訊 -->
+                        <p id="publisher-count-info" class="text-sm text-gray-600"></p>
+                    </div>
                     <div class="overflow-x-auto max-h-[65vh] table-container">
                         <table class="w-full text-sm text-left text-gray-600 border-collapse">
                             <thead class="bg-gray-50 text-xs text-gray-700 uppercase sticky top-0 z-10 shadow-sm">
+                                <!-- 新增：欄位字母標頭 -->
+                                <tr id="col-letter-header" class="col-letter-header">
+                                    <!-- Placeholder cell(s) for checkbox and row number -->
+                                </tr>
                                 <tr>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200">Notion 紀錄</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="name">出版社名稱</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contractId">合約編號</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="staff">負責同仁</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="tier">分級</th>
+                                    <!-- 新增：全選 Checkbox -->
+                                    <th class="px-3 py-3 border-b border-gray-200 checkbox-col admin-only" style="display: none;">
+                                      <input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    </th>
+                                    <!-- 新增：列位數字標頭 -->
+                                     <th class="px-3 py-3 border-b border-gray-200 row-number-col">#</th>
+                                    <!-- 新增 CSS class -->
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 col-notion">Notion 紀錄</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-publisher-name" data-sort="name">出版社名稱</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-contract-id" data-sort="contractId">合約編號</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-staff" data-sort="staff">負責同仁</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-tier" data-sort="tier">分級</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contactStatus">聯繫狀態</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="missionTags">任務標籤</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-mission-tags" data-sort="missionTags">任務標籤</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-new" data-task-header="task_new_ebook">取得:電子書合作</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c">取得:B2C銷售權利</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_gvm">取得:[灰熊]</th>
@@ -188,18 +276,20 @@
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_union">取得:B2B_聯盟</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_public">取得:B2B_公圖</th>
                                     <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_cn">取得:B2B_CN</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200">操作</th>
+                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 col-action">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="master-list-body">
-                                <tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-gray-500">正在等待登入...</td></tr>
+                                <!-- 調整 colspan -->
+                                <tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-gray-500">正在等待登入...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- 模組二：團隊簽約進度 -->
+            <!-- ... 其他模組 section ... -->
+             <!-- 模組二：團隊簽約進度 -->
             <section id="content-team-signing" class="content-section hidden">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿徵集團體目標(中文電子書)</h3>
@@ -309,32 +399,33 @@
                     </div>
                 </div>
             </section>
-            
-            <!-- *** 修正：加入 content-admin 區塊 *** -->
+
+            <!-- 管理員專區：使用者管理 (移除角色變更功能) -->
             <section id="content-admin" class="content-section hidden">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">使用者帳號管理</h3>
-                    
+
                     <div class="overflow-x-auto rounded-lg border">
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
                                 <tr>
                                     <th scope="col" class="px-6 py-3">使用者 Email</th>
                                     <th scope="col" class="px-6 py-3">目前角色</th>
-                                    <th scope="col" class="px-6 py-3">變更角色</th>
-                                    <th scope="col" class="px-6 py-3">操作</th>
+                                    <!-- 移除 "變更角色" 和 "操作" 欄位 -->
                                 </tr>
                             </thead>
                             <tbody id="user-list-body">
                                 <!-- User list will be populated here -->
-                                <tr><td colspan="4" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>
+                                <!-- 調整 colspan -->
+                                <tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>
                             </tbody>
                         </table>
                     </div>
-                     <p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號請至 Firebase Authentication 主控台操作。</p>
+                    <!-- 更新提示文字 -->
+                     <p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號或變更權限，請洽林芝(至 Firebase Authentication 主控台操作。)</p>
                 </div>
             </section>
-                
+
         </div>
     </main>
   </div><!-- /#mainSection -->
@@ -409,7 +500,22 @@
           </div>
       </div>
   </div>
-  
+
+  <!-- 新增：Confirm Modal -->
+  <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
+      <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0">
+          <div class="p-6 text-center">
+              <svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <h3 class="mt-4 text-lg font-medium text-gray-900">確認操作</h3>
+              <p id="confirm-modal-text" class="mt-2 text-sm text-gray-600"></p>
+          </div>
+          <div class="p-4 bg-gray-50 rounded-b-xl text-center space-x-2">
+              <button id="cancel-confirm-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">取消</button>
+              <button id="confirm-action-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">確認刪除</button>
+          </div>
+      </div>
+  </div>
+
   <!-- Toast Notification (來自 檔案 2) -->
   <div id="toast" class="">
       <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert">
@@ -435,8 +541,8 @@
       // --- Firebase SDK Imports (整合) ---
       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
       import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-      // *** 新增 getDocs ***
-      import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, writeBatch, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+      // *** 新增 getDocs, deleteDoc ***
+      import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, writeBatch, setDoc, getDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
       document.addEventListener('DOMContentLoaded', async function () {
           // --- 設定與常數 (來自 檔案 2) ---
@@ -451,30 +557,20 @@
               'TRMS':   { months: [2, 2, 2, 2, 0], taskKey: 'task_get_trms' }
           };
           // *** 修正：加入 admin ***
-          const pageTitles = { 
-              publisherMaster: '出版社母體管理', 
-              teamSigning: '團隊簽約進度', 
-              individualSigning: '個人簽約進度', 
-              publisherTier: '出版社分級聯繫進度', 
-              individualContact: '個人聯繫進度', 
+          const pageTitles = {
+              publisherMaster: '出版社母體管理',
+              teamSigning: '團隊簽約進度',
+              individualSigning: '個人簽約進度',
+              publisherTier: '出版社分級聯繫進度',
+              individualContact: '個人聯繫進度',
               export: '匯出報表',
               admin: '管理員專區'
           };
+          // *** 修改：只保留一筆範例資料 ***
           const initialData = [
-                { name: "悅文社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
-                { name: "東立出版社", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: { task_new_ebook: '2025-08-01' }, notionUrl: null },
-                { name: "臺灣東販", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: ["未合作", "取合作<漫畫寫真>"], contractId: null, tasks: {}, notionUrl: null },
-                { name: "長鴻出版社", staff: "陳俐吟", tier: "A", contactStatus: "審約中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "尖端", staff: "陳玫君", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "親子天下", staff: "李芷瑄", tier: "A", contactStatus: "已聯繫，有意願洽談", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "商周", staff: "李芷瑄", tier: "A", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00123", tasks: { task_get_b2b_public: '2025-10-02' }, notionUrl: null },
-                { name: "我識出版", staff: "李芷瑄", tier: "B", contactStatus: "已簽回，已移交合約", missionTags: [], contractId: "EBK00124", tasks: { task_new_ebook: '2025-10-02', task_get_b2c: '2025-10-02' }, notionUrl: null },
-                { name: "新加坡大學出版社", staff: "李芷瑄", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "晨星出版", staff: "李虹儀", tier: "B", contactStatus: "聯繫中", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "時報文化", staff: "李虹儀", tier: "A", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null },
-                { name: "群學出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: [], contractId: null, tasks: {}, notionUrl: null }
-            ];
-            
+              { name: "範例出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: ["範例標籤"], contractId: null, tasks: {}, notionUrl: null }
+          ];
+
           // --- 全域狀態管理 (來自 檔案 2) ---
           const state = {
               publishers: [],
@@ -485,7 +581,10 @@
               auth: null, // 將在初始化時設定
               appId: null, // 將在初始化時設定
               publishersCollection: null,
-              isDashboardInitialized: false // *** 旗標，防止重複初始化 ***
+              isDashboardInitialized: false, // *** 旗標，防止重複初始化 ***
+              selectedPublisherIds: new Set(), // *** 新增：追蹤選取的項目 ***
+              currentRole: 'user', // *** 新增：追蹤目前使用者角色 ***
+              isSidebarCollapsed: true, // *** 新增：側邊欄狀態 ***
           };
 
           // --- DOM 元素快取 (整合) ---
@@ -509,6 +608,20 @@
               alertModal: document.getElementById('alert-modal'),
               alertModalContent: document.getElementById('alert-modal').querySelector('.modal-content'),
               alertModalText: document.getElementById('alert-modal-text'),
+              // *** 新增：Confirm Modal 元素 ***
+              confirmModal: document.getElementById('confirm-modal'),
+              confirmModalContent: document.getElementById('confirm-modal').querySelector('.modal-content'),
+              confirmModalText: document.getElementById('confirm-modal-text'),
+              confirmActionBtn: document.getElementById('confirm-action-btn'),
+              cancelConfirmBtn: document.getElementById('cancel-confirm-btn'),
+              // *** 新增：刪除相關按鈕 ***
+              selectAllCheckbox: document.getElementById('select-all-checkbox'),
+              deleteSelectedBtn: document.getElementById('delete-selected-btn'),
+              colLetterHeader: document.getElementById('col-letter-header'), // *** 新增：欄位字母標頭列 ***
+              sidebar: document.getElementById('sidebar'), // *** 新增：側邊欄元素 ***
+              sidebarToggle: document.getElementById('sidebar-toggle'), // *** 新增：側邊欄開關按鈕 ***
+              mainContent: document.getElementById('mainContent'), // *** 新增：主內容區塊 ***
+              publisherCountInfo: document.getElementById('publisher-count-info'), // *** 新增：筆數資訊元素 ***
           };
           // (檔案 1 的 dom 元素)
           const loginSection = document.getElementById('loginSection');
@@ -528,13 +641,13 @@
               state.appId = typeof __app_id !== 'undefined' ? __app_id : 'ebook-dashboard';
               const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
               if (!firebaseConfig.apiKey) throw new Error("Firebase config is missing.");
-              
+
               const app = initializeApp(firebaseConfig);
               state.db = getFirestore(app);
               state.auth = getAuth(app);
               // *** 錯誤修正：在這裡設定 dom.dbStatus.textContent ***
               if(dom.dbStatus) dom.dbStatus.textContent = '初始化...';
-              
+
           } catch (error) {
               console.error("Firebase initialization failed:", error);
               // *** 錯誤修正：防呆，檢查 dom.dbStatus 和 loginError 是否存在 ***
@@ -554,65 +667,85 @@
                   // 使用者已登入 Auth，檢查 Firestore 權限
                   const uid = user.uid;
                   const email = user.email;
-                  
+
                   // 這是 檔案 1 的權限路徑
-                  const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", uid); 
+                  const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", uid);
                   const userDoc = await getDoc(userDocRef);
 
                   if (userDoc.exists()) {
                       // --- 登入且授權成功 ---
-                      const role = userDoc.data().role;
-                      console.log(`%c[偵錯 1/5] 登入成功，權限已確認 (Role: ${role})`, "color: blue; font-weight: bold;");
+                      state.currentRole = userDoc.data().role; // *** 儲存角色 ***
+                      console.log(`%c[偵錯 1/5] 登入成功，權限已確認 (Role: ${state.currentRole})`, "color: blue; font-weight: bold;");
 
-                      
+
                       // 1. 切換 UI
                       loginSection.style.display = 'none';
                       mainSection.style.display = 'flex'; // 儀表板使用 flex
-                      
-                      // 2. 設定使用者資訊
-                      userRoleDisplay.textContent = `${email}（${role}）`;
 
-                      // 3. 處理管理員權限
-                      const adminOnlyLinks = document.querySelectorAll('.admin-only');
-                      if (role === "admin") {
-                          // *** 修正：將 display 設為 list-item ***
-                          adminOnlyLinks.forEach(el => { el.style.display = 'list-item'; }); 
-                      } else {
-                          adminOnlyLinks.forEach(el => { el.style.display = 'none'; });
-                      }
-                      
+                      // 2. 設定使用者資訊
+                      userRoleDisplay.textContent = `${email}（${state.currentRole}）`;
+
+                      // 3. 處理管理員權限相關 UI 元素
+                      const adminOnlyElements = document.querySelectorAll('.admin-only');
+                      const displayStyle = state.currentRole === "admin" ? 'list-item' : 'none'; // 連結用 list-item
+                      const displayStyleBlock = state.currentRole === "admin" ? 'inline-flex' : 'none'; // 按鈕用 inline-flex or block
+                      const displayStyleTable = state.currentRole === "admin" ? 'table-cell' : 'none'; // 表格欄位用 table-cell
+
+                      document.querySelectorAll('.admin-only').forEach(el => {
+                           if (el.tagName === 'LI') {
+                              el.style.display = displayStyle;
+                           } else if (el.tagName === 'BUTTON'){
+                              el.style.display = displayStyleBlock;
+                           } else if (el.tagName === 'TH' || el.tagName === 'TD') {
+                              el.style.display = displayStyleTable;
+                           } else {
+                               el.style.display = displayStyleBlock; // Default
+                           }
+                      });
+
+                      // *** 新增：更新字母標頭的 Colspan ***
+                      updateColLetterHeaderColspan();
+
                       // *** 防止重複初始化 ***
-                      // 如果儀表板已經初始化 (例如只是重新整理)，就不要再重複綁定事件
                       if (state.isDashboardInitialized) {
                           console.log("[偵錯] 儀表板已初始化，跳過重複設定。");
-                          // 如果只是重新整理，還是要確保 admin link 正確顯示
-                           if (role === "admin") {
-                               adminOnlyLinks.forEach(el => { el.style.display = 'list-item'; });
-                           } else {
-                               adminOnlyLinks.forEach(el => { el.style.display = 'none'; });
-                           }
+                          // 重新整理時也要確保 admin UI 正確顯示
+                          document.querySelectorAll('.admin-only').forEach(el => {
+                               if (el.tagName === 'LI') { el.style.display = displayStyle;}
+                               else if (el.tagName === 'BUTTON'){ el.style.display = displayStyleBlock; }
+                               else if (el.tagName === 'TH' || el.tagName === 'TD') { el.style.display = displayStyleTable; }
+                               else { el.style.display = displayStyleBlock; }
+                          });
+                          updateColLetterHeaderColspan(); // 重新整理也要更新 Colspan
+                          // *** 重新整理時套用側邊欄狀態 ***
+                          applySidebarState();
+                          renderAll(); // 重新渲染以確保 checkbox 顯示
                           return;
                       }
-                      
+
                       // 4. *** 觸發儀表板資料載入 (檔案 2 的核心) ***
                       console.log("[偵錯 2/5] 正在初始化儀表板...");
                       dom.dbStatus.textContent = '已連接';
                       dom.dbStatus.className = 'font-semibold text-green-600';
-                      
+
                       // 這是 檔案 2 的資料庫路徑
                       state.publishersCollection = collection(state.db, `/artifacts/${state.appId}/public/data/publishers`);
+                      renderColLetterHeader(); // *** 新增：渲染字母標頭 ***
                       listenToPublishers(); // <-- 在此啟動儀表板
-                      
+
                       // 5. 初始化儀表板的事件監聽器 (只應執行一次)
                       console.log("[偵錯 3/5] 正在設定儀表板事件監聽器...");
-                      setupEventListeners(); // 包含使用者管理的事件監聽
+                      setupEventListeners();
                       setupFilters();
                       switchContent('publisherMaster'); // 預設顯示主頁
-                      
+
                       // *** 如果是 admin，立即載入使用者列表 ***
-                      if (role === 'admin') {
-                          fetchUsers(); 
+                      if (state.currentRole === 'admin') {
+                          fetchUsers();
                       }
+
+                      // *** 新增：初始化側邊欄狀態 ***
+                      applySidebarState();
 
                       state.isDashboardInitialized = true; // *** 標記為已初始化 ***
 
@@ -632,14 +765,15 @@
                   dom.dbStatus.textContent = '未連接';
                   dom.dbStatus.className = 'font-semibold text-gray-400';
                   state.isDashboardInitialized = false; // 重設旗標
+                  state.currentRole = 'user'; // 重設角色
               }
-          });
+          }); // *** 修正：補上這個 }); ***
 
           // 登入按鈕事件 (來自 檔案 1)
           loginBtn.addEventListener("click", async () => {
               const email = loginEmail.value.trim();
               const password = loginPassword.value;
-              loginError.textContent = ""; 
+              loginError.textContent = "";
               if (!email || !password) {
                   loginError.textContent = "請輸入 Email 和密碼";
                   return;
@@ -670,18 +804,22 @@
               console.log(`%c[偵錯 4/5] 正在附加 Snapshot 監聽器至: ${state.publishersCollection.path}`, "color: blue;");
               onSnapshot(state.publishersCollection, async (snapshot) => {
                   console.log(`%c[偵錯 5/5] Snapshot 成功接收! (空集合: ${snapshot.empty}, 文件數: ${snapshot.size})`, "color: green; font-weight: bold;");
-                  
-                  if (snapshot.empty && initialData.length > 0) {
-                      console.log("資料庫為空，正在植入範例資料...");
-                      await seedInitialData();
-                      return; // Seeding triggers another snapshot
-                  }
+
+                  // *** 修改：註解掉自動植入資料 ***
+                  // if (snapshot.empty && initialData.length > 0) {
+                  //     console.log("資料庫為空，正在植入範例資料...");
+                  //     await seedInitialData();
+                  //     return; // Seeding triggers another snapshot
+                  // }
+
                   state.publishers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                   state.analytics = calculateAllAnalytics(state.publishers);
-                  renderAll();
+                  renderAll(); // 觸發渲染
+                  updateDeleteSelectedButtonState(); // 更新刪除按鈕狀態
               }, (error) => {
                   console.error("%c[偵錯 失敗] Firebase Snapshot 錯誤:", "color: red; font-weight: bold;", error);
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-red-500">讀取資料時發生錯誤。請檢查 Firestore 安全規則或主控台錯誤訊息。</td></tr>`;
+                   // 調整 colspan
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-red-500">讀取資料時發生錯誤。請檢查 Firestore 安全規則或主控台錯誤訊息。</td></tr>`;
               });
           }
 
@@ -706,29 +844,71 @@
               console.log("%c[偵錯 6/6] renderAll() 啟動. 正在渲染所有模組...", "color: green;");
               try {
                 const filteredAndSorted = getFilteredAndSortedData();
-                renderMasterList(filteredAndSorted);
+                renderMasterList(filteredAndSorted); // 會更新表格內容
                 renderTeamSigningProgress(state.analytics.teamSigningStats);
                 renderIndividualSigningProgress(state.analytics.individualSigningStats);
                 renderPublisherTierProgress(state.analytics.tierProgressStats);
                 renderIndividualContactProgress(state.analytics.individualContactStats);
+                // *** 渲染後檢查 checkbox 狀態 ***
+                updateCheckboxesAfterRender();
                 console.log("%c[偵錯] 渲染完畢!", "color: green;");
               } catch (error) {
                   console.error("%c[偵錯 失敗] 渲染 (Render) 過程中發生錯誤:", "color: red; font-weight: bold;", error);
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-red-500">渲染資料時發生錯誤: ${error.message}</td></tr>`;
+                  // 調整 colspan
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-red-500">渲染資料時發生錯誤: ${error.message}</td></tr>`;
               }
           }
-          
+
+          // *** 修改：加入更新筆數資訊 ***
           function renderMasterList(data) {
+              if (!dom.masterListBody) return; // 防呆
+
+              const totalCount = state.publishers.length;
+              const filteredCount = data.length;
+              const countInfoEl = dom.publisherCountInfo;
+
               if (data.length === 0) {
-                  const message = state.publishers.length > 0 ? "沒有符合篩選條件的結果。" : "資料庫中尚無資料，請新增或匯入。";
-                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="19" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                  const message = totalCount > 0 ? "沒有符合篩選條件的結果。" : "資料庫中尚無資料，請新增或匯入。";
+                   // 調整 colspan
+                  dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="21" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                  // 更新筆數
+                   if (countInfoEl) {
+                        countInfoEl.textContent = totalCount > 0 ? `篩選結果：共 0 筆資料 (總計 ${totalCount} 筆)` : '共 0 筆資料。';
+                    }
                   return;
               }
-              dom.masterListBody.innerHTML = data.map(pub => createPublisherRowHtml(pub)).join('');
+
+              // 更新筆數資訊
+               if (countInfoEl) {
+                  const isFiltered = state.filters.search || state.filters.staff !== 'all' || state.filters.tier !== 'all' || state.filters.status !== 'all';
+                  if (isFiltered) {
+                      countInfoEl.textContent = `篩選結果：共 ${filteredCount} 筆資料 (總計 ${totalCount} 筆)`;
+                  } else {
+                      countInfoEl.textContent = `共 ${totalCount} 筆資料。`;
+                  }
+               }
+
+
+              // *** 修改：傳入索引 i ***
+              dom.masterListBody.innerHTML = data.map((pub, i) => createPublisherRowHtml(pub, i)).join('');
+
+              // *** 渲染後立即更新 checkbox 顯示狀態 ***
+               const checkBoxes = dom.masterListBody.querySelectorAll('.row-checkbox');
+               const displayStyleTable = state.currentRole === "admin" ? 'table-cell' : 'none';
+               checkBoxes.forEach(cb => {
+                   const cell = cb.closest('td');
+                   if (cell) cell.style.display = displayStyleTable;
+               });
+               // *** 新增：更新列位數字欄的顯示狀態 ***
+               const rowNumberCells = dom.masterListBody.querySelectorAll('.row-number-col');
+               rowNumberCells.forEach(cell => {
+                    cell.style.display = 'table-cell'; // 列位數字始終顯示
+               });
           }
-          
-          // --- 資料分析與計算 (集中處理) ---
-          function calculateAllAnalytics(publishers) {
+
+          // --- 資料分析與計算 (保持不變) ---
+          // ... calculateAllAnalytics, calculateTeamSigningStats, etc. ...
+           function calculateAllAnalytics(publishers) {
               return {
                   teamSigningStats: calculateTeamSigningStats(publishers),
                   individualSigningStats: calculateIndividualSigningStats(publishers),
@@ -803,7 +983,7 @@
               });
               return progressData;
           }
-          
+
           function calculateIndividualContactStats(publishers) {
                 const stats = {};
                 staffList.forEach(s => stats[s] = { total: 0, contacted: 0 });
@@ -822,9 +1002,11 @@
                         rate: data.total > 0 ? (data.contacted / data.total * 100) : 0
                     }));
           }
-          
-          // --- 各模組渲染函式 (使用計算好的 analytics) ---
-          function renderTeamSigningProgress(stats) {
+
+
+          // --- 各模組渲染函式 (保持不變) ---
+          // ... renderTeamSigningProgress, renderIndividualSigningProgress, etc. ...
+           function renderTeamSigningProgress(stats) {
               const kpiTableBody = document.getElementById('kpi-table-body');
               const kpiTableFooter = document.getElementById('kpi-table-footer');
               let bodyHtml = '';
@@ -842,7 +1024,7 @@
                   const progressTotal = progressMonths.reduce((a, b) => a + b, 0);
                   const overallRate = targetTotal > 0 ? (progressTotal / targetTotal * 100).toFixed(1) : 0;
                   const gap = targetTotal - progressTotal;
-                  
+
                   targetData.forEach((m, i) => progressTotals.target.months[i] += m);
                   progressTotals.target.total += targetTotal;
                   progressMonths.forEach((m, i) => progressTotals.progress.months[i] += m);
@@ -851,7 +1033,7 @@
                   const progressCells = progressMonths.map((p, i) =>
                       `<td>${p}</td><td>${targetData[i] > 0 ? (p / targetData[i] * 100).toFixed(0) : 0}%</td>`
                   ).join('');
-                  
+
                   bodyHtml += `<tr>
                       <td class="item-col">${item}</td>
                       ${targetData.map(m => `<td>${m}</td>`).join('')}
@@ -862,7 +1044,7 @@
                       <td class="gap-col">${gap}</td>
                   </tr>`;
               });
-              kpiTableBody.innerHTML = bodyHtml;
+              if(kpiTableBody) kpiTableBody.innerHTML = bodyHtml;
 
               const footerOverallRate = progressTotals.target.total > 0 ? (progressTotals.progress.total / progressTotals.target.total * 100).toFixed(1) : 0;
               const footerGap = progressTotals.target.total - progressTotals.progress.total;
@@ -870,7 +1052,7 @@
                   `<td>${p}</td><td>${progressTotals.target.months[i] > 0 ? (p / progressTotals.target.months[i] * 100).toFixed(0) : 0}%</td>`
               ).join('');
 
-              kpiTableFooter.innerHTML = `<tr class="total-row">
+              if(kpiTableFooter) kpiTableFooter.innerHTML = `<tr class="total-row">
                   <td class="item-col">總計</td>
                   ${progressTotals.target.months.map(m => `<td>${m}</td>`).join('')}
                   <td class="highlight">${progressTotals.target.total}</td>
@@ -883,6 +1065,7 @@
 
           function renderIndividualSigningProgress(stats) {
                  const tableBody = document.getElementById('individual-signing-body');
+                 if(!tableBody) return;
                  tableBody.innerHTML = stats.map((row, index) => {
                      const rate = row.rate.toFixed(1);
                      return `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
@@ -898,25 +1081,28 @@
                      </tr>`;
                  }).join('');
           }
-          
+
           function renderPublisherTierProgress(progressData) {
               const container = document.getElementById('progress-cards-container');
               const filter = document.getElementById('progress-filter');
+              if(!container || !filter) return;
+
               const staffInFilter = Object.keys(progressData).sort();
-              
+
               container.innerHTML = staffInFilter.map(name => createProgressCardHTML(name, progressData[name])).join('') || '<p class="text-center text-gray-500 col-span-full">無資料可顯示。</p>';
-              
+
               // Update and preserve filter selection
               const currentFilterValue = filter.value;
               filter.innerHTML = `<option value="all">顯示全部同仁</option>${staffInFilter.map(name => `<option value="${name}">${name}</option>`).join('')}`;
               filter.value = staffInFilter.includes(currentFilterValue) ? currentFilterValue : 'all';
               filter.dispatchEvent(new Event('change')); // Trigger filter change to show/hide cards
-              
+
               applyHealthCheck();
           }
 
           function renderIndividualContactProgress(stats) {
                  const container = document.getElementById('individual-contact-cards-container');
+                 if(!container) return;
                  container.innerHTML = stats.map(row => {
                      const rate = row.rate.toFixed(0);
                      return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
@@ -931,33 +1117,43 @@
                      </div>`;
                  }).join('');
           }
-          
+
           // --- Helper 函式 ---
-          function createPublisherRowHtml(pub) {
-              // *** 防呆：確保 pub.tasks 存在 ***
+          // 修改 createPublisherRowHtml 加入列位數字 和 Notion 換行
+          function createPublisherRowHtml(pub, index) {
               const tasks = pub.tasks || {};
               const taskCells = taskColumns.map(taskKey => `<td class="px-3 py-2 border-b border-gray-200"><input type="date" class="task-date-input" data-task="${taskKey}" value="${tasks[taskKey] || ''}"></td>`).join('');
+              const isSelected = state.selectedPublisherIds.has(pub.id);
+              // *** Checkbox 和 Delete button 的顯示狀態由 CSS .admin-only 控制 ***
               return `
-              <tr class="bg-white hover:bg-gray-50" data-id="${pub.id}">
-                  <td class="px-3 py-2 border-b border-gray-200">
-                      <div class="flex items-center space-x-1">
+              <tr class="bg-white hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}" data-id="${pub.id}">
+                  <td class="px-3 py-2 border-b border-gray-200 checkbox-col admin-only" style="display: ${state.currentRole === 'admin' ? 'table-cell' : 'none'};">
+                    <input type="checkbox" class="row-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="${pub.id}" ${isSelected ? 'checked' : ''}>
+                  </td>
+                  <!-- 新增：列位數字 -->
+                  <td class="px-3 py-2 border-b border-gray-200 row-number-col">${index + 1}</td>
+                  <!-- 修改：Notion 欄位內容換行 -->
+                  <td class="px-3 py-2 border-b border-gray-200 col-notion align-top">
+                      <div class="flex flex-col space-y-1">
                           <input type="url" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="notionUrl" value="${pub.notionUrl || ''}" placeholder="貼上連結...">
-                          <button class="open-notion-btn p-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" title="打開 Notion 連結" ${!pub.notionUrl ? 'disabled' : ''}>
+                          <button class="open-notion-btn p-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed self-start" title="打開 Notion 連結" ${!pub.notionUrl ? 'disabled' : ''}>
                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                           </button>
                       </div>
                   </td>
-                  <td class="px-3 py-3 font-medium text-gray-900 border-b border-gray-200 whitespace-nowrap">${pub.name}</td>
-                  <td class="px-3 py-3 border-b border-gray-200"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="contractId" value="${pub.contractId || ''}" placeholder="無合約編號"></td>
-                  <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="staff">${staffList.map(s => `<option value="${s}" ${pub.staff === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
-                  <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="tier">${tierList.map(t => `<option value="${t}" ${pub.tier === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
-                  <td class="px-3 py-3 border-b border-gray-200"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5 min-w-[150px]" data-field="contactStatus">${contactStatusList.map(s => `<option value="${s}" ${pub.contactStatus === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
-                  <td class="px-3 py-2 border-b border-gray-200"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5 min-w-[200px]" data-field="missionTags" value="${Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''}" placeholder="無標籤"></td>
+                  <td class="px-3 py-3 font-medium text-gray-900 border-b border-gray-200 align-top col-publisher-name">${pub.name}</td>
+                  <td class="px-3 py-3 border-b border-gray-200 align-top col-contract-id"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="contractId" value="${pub.contractId || ''}" placeholder="無合約編號"></td>
+                  <td class="px-3 py-3 border-b border-gray-200 align-top col-staff"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="staff">${staffList.map(s => `<option value="${s}" ${pub.staff === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+                  <td class="px-3 py-3 border-b border-gray-200 align-top col-tier"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="tier">${tierList.map(t => `<option value="${t}" ${pub.tier === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+                  <td class="px-3 py-3 border-b border-gray-200 align-top"><select class="master-field-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5 min-w-[150px]" data-field="contactStatus">${contactStatusList.map(s => `<option value="${s}" ${pub.contactStatus === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+                  <td class="px-3 py-2 border-b border-gray-200 align-top col-mission-tags"><input type="text" class="master-field-input block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" data-field="missionTags" value="${Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''}" placeholder="無標籤"></td>
                   ${taskCells}
-                  <td class="px-3 py-2 border-b border-gray-200">
+                  <td class="px-3 py-2 border-b border-gray-200 align-top col-action">
                       <div class="flex items-center space-x-2">
                           <button class="save-row-btn hidden text-sm bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600">儲存</button>
                           <button class="cancel-row-btn hidden text-sm bg-gray-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-gray-600">取消</button>
+                          <!-- 新增：刪除按鈕 (Admin Only) -->
+                          <button class="delete-row-btn admin-only text-sm bg-red-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-red-600" style="display: ${state.currentRole === 'admin' ? 'inline-block' : 'none'};">刪除</button>
                       </div>
                   </td>
               </tr>`;
@@ -973,7 +1169,7 @@
               if (state.filters.staff !== 'all') data = data.filter(p => p.staff === state.filters.staff);
               if (state.filters.tier !== 'all') data = data.filter(p => p.tier === state.filters.tier);
               if (state.filters.status !== 'all') data = data.filter(p => p.contactStatus === state.filters.status);
-              
+
               // Sort
               data.sort((a, b) => {
                   let valA = a[state.sort.by] || '';
@@ -988,6 +1184,64 @@
               return data;
           }
 
+          // *** 新增：渲染後更新 Checkbox 勾選狀態 ***
+          function updateCheckboxesAfterRender() {
+              if (state.currentRole !== 'admin') return; // 非 admin 不執行
+
+              // 更新 Select All Checkbox
+              const allCheckboxes = dom.masterListBody.querySelectorAll('.row-checkbox');
+              const allVisibleIds = Array.from(allCheckboxes).map(cb => cb.dataset.id);
+              const allVisibleSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => state.selectedPublisherIds.has(id));
+              dom.selectAllCheckbox.checked = allVisibleSelected;
+              dom.selectAllCheckbox.indeterminate = !allVisibleSelected && allVisibleIds.some(id => state.selectedPublisherIds.has(id));
+
+              // 更新個別 Checkbox (理論上 createPublisherRowHtml 已處理，這裡是雙重保險)
+              allCheckboxes.forEach(checkbox => {
+                 checkbox.checked = state.selectedPublisherIds.has(checkbox.dataset.id);
+                 checkbox.closest('tr').classList.toggle('bg-indigo-50', checkbox.checked); // 更新背景色
+              });
+
+              updateDeleteSelectedButtonState(); // 同步更新刪除按鈕狀態
+          }
+
+          // *** 新增：欄位索引轉字母 ***
+          function columnIndexToLetter(index) {
+                let letter = '';
+                let tempIndex = index;
+                while (tempIndex >= 0) {
+                    letter = String.fromCharCode((tempIndex % 26) + 65) + letter;
+                    tempIndex = Math.floor(tempIndex / 26) - 1;
+                }
+                return letter;
+          }
+
+          // *** 新增：渲染欄位字母標頭 ***
+          function renderColLetterHeader() {
+               if (!dom.colLetterHeader) return;
+               const headerCells = document.querySelector('#content-publisher-master thead tr:last-child').cells;
+               let letterHtml = '';
+               // First cell spans checkbox (if admin) and row number
+               const firstColspan = (state.currentRole === 'admin' ? 1 : 0) + 1;
+               letterHtml += `<th colspan="${firstColspan}" class="px-3 py-2 border-b border-gray-200"></th>`;
+
+               let letterIndex = 0;
+               // Start from the actual data columns
+               for (let i = firstColspan; i < headerCells.length; i++) {
+                   letterHtml += `<th class="px-3 py-2 border-b border-gray-200">${columnIndexToLetter(letterIndex)}</th>`;
+                   letterIndex++;
+               }
+               dom.colLetterHeader.innerHTML = letterHtml;
+          }
+           // *** 新增：更新欄位字母標頭的 Colspan (登入/登出時) ***
+          function updateColLetterHeaderColspan() {
+               if (!dom.colLetterHeader) return;
+               const firstCell = dom.colLetterHeader.cells[0];
+               if (firstCell) {
+                  const firstColspan = (state.currentRole === 'admin' ? 1 : 0) + 1;
+                  firstCell.colSpan = firstColspan;
+               }
+          }
+
           // --- 事件監聽器設定 (來自 檔案 2) ---
           function setupEventListeners() {
               // Navigation
@@ -996,13 +1250,6 @@
                       dom.navLinks[key].addEventListener('click', (e) => { e.preventDefault(); switchContent(key); });
                   }
               });
-              
-              // *** 新增：使用者列表的事件監聽 (事件委派) ***
-              if (userListBody) {
-                  userListBody.addEventListener('change', handleRoleChange);
-                  userListBody.addEventListener('click', handleUserAction);
-              }
-
 
               // Master List Filters
               dom.searchInput.addEventListener('input', e => { state.filters.search = e.target.value; renderAll(); });
@@ -1011,23 +1258,28 @@
               dom.statusFilter.addEventListener('change', e => { state.filters.status = e.target.value; renderAll(); });
               document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
 
-              // Master List Table Actions (Sorting, Editing)
+              // Master List Table Actions (Sorting, Editing, Selection, Deletion)
               document.querySelector('#content-publisher-master thead').addEventListener('click', handleSort);
-              dom.masterListBody.addEventListener('change', handleRowChange);
-              dom.masterListBody.addEventListener('click', handleRowClick);
-              
+              dom.masterListBody.addEventListener('change', handleRowChange); // 包含 checkbox 的 change
+              dom.masterListBody.addEventListener('click', handleRowClick); // 包含 delete button 的 click
+
+              // *** 新增：Checkbox 和刪除按鈕的事件監聽 ***
+              dom.selectAllCheckbox.addEventListener('change', handleSelectAllChange);
+              dom.deleteSelectedBtn.addEventListener('click', handleDeleteSelectedClick);
+
+
               // Main Buttons
               document.getElementById('add-publisher-btn').addEventListener('click', () => openAddEditModal());
               document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
               document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('file-input').click());
               document.getElementById('file-input').addEventListener('change', handleFileImport);
-              
+
               // Add/Edit Modal
               dom.addPublisherForm.addEventListener('submit', handleSavePublisher);
               document.getElementById('close-add-modal-btn').addEventListener('click', () => closeModal(dom.addPublisherModal, dom.addPublisherModalContent));
               document.getElementById('cancel-add-btn').addEventListener('click', () => closeModal(dom.addPublisherModal, dom.addPublisherModalContent));
               dom.addPublisherModal.addEventListener('click', e => { if (e.target === dom.addPublisherModal) closeModal(dom.addPublisherModal, dom.addPublisherModalContent); });
-              
+
               // Publisher List Modal
               document.getElementById('close-publisher-list-btn').addEventListener('click', () => closeModal(dom.publisherListModal, dom.publisherListModalContent));
               dom.publisherListModal.addEventListener('click', e => { if (e.target === dom.publisherListModal) closeModal(dom.publisherListModal, dom.publisherListModalContent); });
@@ -1036,12 +1288,20 @@
               document.getElementById('close-alert-modal-btn').addEventListener('click', () => closeModal(dom.alertModal, dom.alertModalContent));
               dom.alertModal.addEventListener('click', e => { if (e.target === dom.alertModal) closeModal(dom.alertModal, dom.alertModalContent); });
 
+              // *** 新增：Confirm Modal 按鈕事件 ***
+              dom.cancelConfirmBtn.addEventListener('click', closeConfirmModal);
+              dom.confirmModal.addEventListener('click', e => { if (e.target === dom.confirmModal) closeConfirmModal(); });
+              // confirmActionBtn 的事件在 openConfirmModal 中動態設定
+
               // Tier Progress View
               document.getElementById('progress-filter').addEventListener('change', handleTierProgressFilter);
               document.getElementById('progress-cards-container').addEventListener('click', handleTierCardClick);
 
               // Export
               document.getElementById('export-selected-btn').addEventListener('click', handleExport);
+
+              // *** 新增：側邊欄開關事件 ***
+              dom.sidebarToggle.addEventListener('click', toggleSidebar);
           }
 
           // --- 事件處理函式 (來自 檔案 2) ---
@@ -1055,15 +1315,15 @@
               }
               Object.values(dom.contentSections).forEach(section => {
                   // *** 防呆：檢查 section 是否存在 ***
-                  if (section) section.classList.add('hidden'); 
+                  if (section) section.classList.add('hidden');
               });
               // *** 防呆：檢查目標 section 是否存在 ***
-              if(dom.contentSections[targetId]) { 
+              if(dom.contentSections[targetId]) {
                 dom.contentSections[targetId].classList.remove('hidden');
-                
+
                 // *** 新增：如果切換到 admin 頁面，載入使用者 ***
                 if (targetId === 'admin') {
-                   fetchUsers(); 
+                   fetchUsers();
                 }
               } else {
                   console.warn(`Content section for "${targetId}" not found.`);
@@ -1076,13 +1336,14 @@
               dom.staffFilter.value = 'all';
               dom.tierFilter.value = 'all';
               dom.statusFilter.value = 'all';
+              state.selectedPublisherIds.clear(); // 清除選取
               renderAll();
           }
 
           function handleSort(e) {
               const header = e.target.closest('.sortable-header');
               if (!header) return;
-              
+
               const sortBy = header.dataset.sort;
               if (state.sort.by === sortBy) {
                   state.sort.order = state.sort.order === 'asc' ? 'desc' : 'asc';
@@ -1095,19 +1356,40 @@
               renderAll();
           }
 
+          // 修改 handleRowChange 以處理 checkbox
           function handleRowChange(e) {
               const row = e.target.closest('tr');
               if (!row || !row.dataset.id) return;
-              row.classList.add('row-dirty');
-              row.querySelector('.save-row-btn').classList.remove('hidden');
-              row.querySelector('.cancel-row-btn').classList.remove('hidden');
+
+              // 處理資料修改
+              if (e.target.matches('.master-field-input, .master-field-select, .task-date-input')) {
+                  row.classList.add('row-dirty');
+                  row.querySelector('.save-row-btn').classList.remove('hidden');
+                  row.querySelector('.cancel-row-btn').classList.remove('hidden');
+              }
+
+              // 處理 checkbox 選取
+              if (e.target.classList.contains('row-checkbox')) {
+                  const checkbox = e.target;
+                  const docId = checkbox.dataset.id;
+                  if (checkbox.checked) {
+                      state.selectedPublisherIds.add(docId);
+                      row.classList.add('bg-indigo-50'); // 選取時高亮
+                  } else {
+                      state.selectedPublisherIds.delete(docId);
+                      row.classList.remove('bg-indigo-50'); // 取消選取時移除高亮
+                  }
+                  updateCheckboxesAfterRender(); // 更新全選狀態和刪除按鈕狀態
+              }
           }
 
+           // 修改 handleRowClick 以處理 delete button
           async function handleRowClick(e) {
               const target = e.target;
               const row = target.closest('tr');
               if (!row) return;
               const docId = row.dataset.id;
+              const publisherName = row.cells[3].textContent; // *** 修改：名稱現在是第 4 欄 (索引 3) ***
 
               if (target.closest('.open-notion-btn')) {
                   const url = row.querySelector('[data-field="notionUrl"]').value;
@@ -1116,30 +1398,36 @@
                   await saveRowChanges(row, docId);
               } else if (target.classList.contains('cancel-row-btn')) {
                   cancelRowChanges(row, docId);
+              } else if (target.classList.contains('delete-row-btn')) {
+                  // *** 新增：呼叫刪除單一項目 ***
+                  openConfirmModal(`您確定要刪除出版社「${publisherName}」嗎？此操作無法復原。`, () => {
+                      deleteSinglePublisher(docId);
+                  });
               }
           }
-          
+
           async function saveRowChanges(row, docId) {
               const docRef = doc(state.publishersCollection, docId);
               const updatePayload = {};
-              
+
               row.querySelectorAll('.master-field-input, .master-field-select').forEach(input => {
                   const field = input.dataset.field;
                   updatePayload[field] = (field === 'missionTags')
                       ? input.value.split(',').map(t => t.trim()).filter(Boolean)
                       : (input.value || null);
               });
-              
+
               updatePayload.tasks = {};
               row.querySelectorAll('.task-date-input').forEach(input => {
                   updatePayload.tasks[input.dataset.task] = input.value || null;
               });
 
-              if (updatePayload.contactStatus !== "已簽回，已移交合約" && Object.values(updatePayload.tasks).some(date => date)) {
+              // *** 修正：檢查 updatePayload.contactStatus 是否存在 ***
+              if (updatePayload.contactStatus && updatePayload.contactStatus !== "已簽回，已移交合約" && Object.values(updatePayload.tasks).some(date => date)) {
                   showAlert("只有在聯繫狀態為「已簽回，已移交合約」時，才能填寫任務完成日期。");
                   return;
               }
-              
+
               try {
                   await updateDoc(docRef, updatePayload);
                   row.classList.remove('row-dirty');
@@ -1149,49 +1437,134 @@
               } catch (error) {
                   console.error("Error updating document:", error);
                   showToast("儲存失敗", "error");
+                  if (error.code === 'permission-denied') {
+                     showAlert("權限不足，無法儲存變更。請確認 Firestore 安全規則。");
+                  }
               }
           }
 
           function cancelRowChanges(row, docId) {
               const originalData = state.publishers.find(p => p.id === docId);
-              if (originalData) {
-                  const newRowHtml = createPublisherRowHtml(originalData);
+              const index = getFilteredAndSortedData().findIndex(p => p.id === docId); // *** 新增：取得正確索引 ***
+              if (originalData && index !== -1) { // *** 修改：檢查索引 ***
+                  // *** 修改：傳入索引 ***
+                  const newRowHtml = createPublisherRowHtml(originalData, index);
                   const tempDiv = document.createElement('div');
                   tempDiv.innerHTML = `<table><tbody>${newRowHtml}</tbody></table>`;
-                  row.replaceWith(tempDiv.querySelector('tr'));
+                  const newRow = tempDiv.querySelector('tr');
+                  row.replaceWith(newRow);
+                  // *** 取消後確保 checkbox 狀態正確 ***
+                  const checkbox = newRow.querySelector('.row-checkbox');
+                  if(checkbox) {
+                      checkbox.checked = state.selectedPublisherIds.has(docId);
+                  }
+                   newRow.classList.toggle('bg-indigo-50', state.selectedPublisherIds.has(docId)); // 更新背景色
               }
           }
-          
-          // --- *** 新增：使用者管理相關函數 *** ---
+
+          // --- *** 新增：刪除與選取相關函數 *** ---
+          function handleSelectAllChange(e) {
+              const isChecked = e.target.checked;
+              const allVisibleCheckboxes = dom.masterListBody.querySelectorAll('.row-checkbox');
+
+              allVisibleCheckboxes.forEach(checkbox => {
+                  const docId = checkbox.dataset.id;
+                  checkbox.checked = isChecked;
+                  const row = checkbox.closest('tr');
+                  if (isChecked) {
+                      state.selectedPublisherIds.add(docId);
+                      row.classList.add('bg-indigo-50');
+                  } else {
+                      state.selectedPublisherIds.delete(docId);
+                       row.classList.remove('bg-indigo-50');
+                  }
+              });
+               updateDeleteSelectedButtonState(); // 更新按鈕狀態
+          }
+
+          function updateDeleteSelectedButtonState() {
+               dom.deleteSelectedBtn.disabled = state.selectedPublisherIds.size === 0;
+               dom.deleteSelectedBtn.classList.toggle('opacity-50', state.selectedPublisherIds.size === 0);
+               dom.deleteSelectedBtn.classList.toggle('cursor-not-allowed', state.selectedPublisherIds.size === 0);
+          }
+
+          function handleDeleteSelectedClick() {
+               if (state.selectedPublisherIds.size === 0) return;
+
+               openConfirmModal(`您確定要刪除選取的 ${state.selectedPublisherIds.size} 個出版社嗎？此操作無法復原。`, () => {
+                   deleteSelectedPublishers();
+               });
+          }
+
+          async function deleteSinglePublisher(docId) {
+              if (!docId) return;
+              const docRef = doc(state.publishersCollection, docId);
+              try {
+                  await deleteDoc(docRef);
+                  state.selectedPublisherIds.delete(docId); // 從選取集合中移除
+                  showToast("出版社刪除成功！", "success");
+                  // onSnapshot 會自動更新畫面
+                  updateDeleteSelectedButtonState(); // 更新按鈕狀態
+              } catch (error) {
+                  console.error("刪除單一出版社失敗:", error);
+                  showToast("刪除失敗", "error");
+                  if (error.code === 'permission-denied') {
+                     showAlert("權限不足，無法刪除。請確認 Firestore 安全規則。");
+                  }
+              }
+          }
+
+          async function deleteSelectedPublishers() {
+              if (state.selectedPublisherIds.size === 0) return;
+
+              const batch = writeBatch(state.db);
+              state.selectedPublisherIds.forEach(id => {
+                  const docRef = doc(state.publishersCollection, id);
+                  batch.delete(docRef);
+              });
+
+              try {
+                  await batch.commit();
+                  showToast(`已成功刪除 ${state.selectedPublisherIds.size} 個出版社。`, "success");
+                  state.selectedPublisherIds.clear(); // 清空選取
+                  // onSnapshot 會自動更新畫面
+                  updateCheckboxesAfterRender(); // 更新 checkbox 狀態
+                  updateDeleteSelectedButtonState(); // 更新按鈕狀態
+              } catch (error) {
+                  console.error("批次刪除出版社失敗:", error);
+                  showToast("批次刪除失敗", "error");
+                   if (error.code === 'permission-denied') {
+                     showAlert("權限不足，無法刪除。請確認 Firestore 安全規則。");
+                  }
+              }
+          }
+
+
+          // --- 使用者管理相關函數 (保持簡化) ---
           async function fetchUsers() {
               if (state.auth.currentUser) {
-                 // 檢查是否為 admin (雖然理論上只有 admin 能看到這頁，多一層保險)
                  const currentUserDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", state.auth.currentUser.uid);
                  const currentUserDoc = await getDoc(currentUserDocRef);
                  if (!currentUserDoc.exists() || currentUserDoc.data().role !== 'admin') {
-                    userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-500">權限不足，無法載入使用者清單。</td></tr>';
+                    userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-red-500">權限不足，無法載入使用者清單。</td></tr>';
                     return;
                  }
-
-                 userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>';
+                 userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>';
                  try {
-                     // 取得 users 集合的所有文件 (需要 Firestore 規則允許 admin 讀取)
                      const usersCollectionRef = collection(state.db, "artifacts", "ebook-dashboard", "users");
                      const querySnapshot = await getDocs(usersCollectionRef);
                      const users = [];
                      querySnapshot.forEach((doc) => {
-                         // 假設 user 文件內有 email 欄位 (或者需要從 Auth 取得?) 
-                         // 這裡假設 Firestore 文件內直接存了 email 和 role
-                         users.push({ 
-                             id: doc.id, // Firestore 文件 ID (通常等於 Auth UID)
-                             email: doc.data().email || `未知 Email (UID: ${doc.id})`, // 嘗試讀取 email
-                             role: doc.data().role 
+                         users.push({
+                             id: doc.id,
+                             email: doc.data().email || `未知 Email (UID: ${doc.id})`,
+                             role: doc.data().role
                          });
                      });
                      renderUserList(users);
                  } catch (error) {
                      console.error("載入使用者列表時發生錯誤:", error);
-                     userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-500">載入使用者清單失敗，請檢查主控台錯誤訊息與 Firestore 安全規則。</td></tr>';
+                     userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-red-500">載入使用者清單失敗，請檢查主控台錯誤訊息與 Firestore 安全規則。</td></tr>';
                      if (error.code === 'permission-denied') {
                          showAlert("權限不足，無法讀取使用者清單。請確認 Firestore 安全規則是否已更新並允許管理員讀取 users 集合。");
                      }
@@ -1200,130 +1573,71 @@
           }
 
           function renderUserList(users) {
+              if (!userListBody) return; // 防呆
               if (users.length === 0) {
-                 userListBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500">目前沒有其他使用者。</td></tr>';
+                 userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前沒有其他使用者。</td></tr>';
                  return;
               }
-              
               userListBody.innerHTML = users.map((user, index) => {
-                 // 管理員不能更改自己的角色
-                 const isCurrentUser = user.id === state.auth.currentUser.uid; 
+                 const isCurrentUser = user.id === state.auth.currentUser.uid;
                  return `
                  <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b" data-userid="${user.id}">
                      <td class="px-6 py-4 font-medium text-gray-900">${user.email} ${isCurrentUser ? '(您)' : ''}</td>
                      <td class="px-6 py-4">${user.role}</td>
-                     <td class="px-6 py-4">
-                         <select class="role-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1.5" ${isCurrentUser ? 'disabled' : ''}>
-                             <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
-                             <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
-                         </select>
-                     </td>
-                     <td class="px-6 py-4">
-                         <button class="save-role-btn hidden text-sm bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600 disabled:opacity-50" ${isCurrentUser ? 'disabled' : ''}>
-                             儲存
-                         </button>
-                     </td>
                  </tr>`;
               }).join('');
           }
 
-          function handleRoleChange(e) {
-              if (e.target.classList.contains('role-select')) {
-                  const row = e.target.closest('tr');
-                  const saveBtn = row.querySelector('.save-role-btn');
-                  saveBtn.classList.remove('hidden'); // 顯示儲存按鈕
-              }
-          }
-
-          async function handleUserAction(e) {
-               if (e.target.classList.contains('save-role-btn')) {
-                   const row = e.target.closest('tr');
-                   const userId = row.dataset.userid;
-                   const select = row.querySelector('.role-select');
-                   const newRole = select.value;
-                   
-                   e.target.disabled = true;
-                   e.target.textContent = '儲存中...';
-
-                   await updateUserRole(userId, newRole, e.target);
-               }
-          }
-
-          async function updateUserRole(userId, newRole, buttonElement) {
-              if (!userId || !newRole) return;
-              
-              // 防止管理員更改自己的角色
-              if (userId === state.auth.currentUser.uid) {
-                  showAlert("您不能更改自己的角色。");
-                  buttonElement.classList.add('hidden'); // 隱藏按鈕
-                  buttonElement.disabled = false;
-                  buttonElement.textContent = '儲存';
-                  // 重設下拉選單? (可選)
-                  const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", userId);
-                  const userDoc = await getDoc(userDocRef);
-                  if (userDoc.exists()) {
-                      const select = buttonElement.closest('tr').querySelector('.role-select');
-                      select.value = userDoc.data().role;
-                  }
-                  return;
-              }
-
-              const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", userId);
-              try {
-                  await updateDoc(userDocRef, { role: newRole });
-                  showToast("角色更新成功！", "success");
-                  buttonElement.classList.add('hidden'); // 隱藏按鈕
-                  // 更新表格中的角色顯示 (找到對應的儲存格更新文字)
-                  const roleCell = buttonElement.closest('tr').cells[1]; // 第二個儲存格
-                  roleCell.textContent = newRole;
-              } catch (error) {
-                  console.error("更新角色失敗:", error);
-                  showToast("角色更新失敗，請檢查權限或主控台錯誤。", "error");
-                  if (error.code === 'permission-denied') {
-                      showAlert("權限不足，無法更新角色。請確認 Firestore 安全規則。");
-                  }
-              } finally {
-                  buttonElement.disabled = false;
-                  buttonElement.textContent = '儲存';
-              }
-          }
-
-
           // --- Modal & UI Helpers ---
-          function openModal(modal, content) { 
-            // *** 防呆：檢查元素是否存在 ***
+          function openModal(modal, content) {
             if (modal && content) {
-                modal.classList.remove('hidden'); 
-                modal.classList.add('flex'); 
-                setTimeout(() => content.classList.add('open'), 10); 
-            } else {
-                console.error("Modal or content element not found for openModal");
-            }
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => content.classList.add('open'), 10);
+            } else { console.error("Modal or content element not found for openModal"); }
           }
-          function closeModal(modal, content) { 
-            // *** 防呆：檢查元素是否存在 ***
+          function closeModal(modal, content) {
             if (modal && content) {
-                content.classList.remove('open'); 
-                setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300); 
-            } else {
-                 console.error("Modal or content element not found for closeModal");
-            }
+                content.classList.remove('open');
+                setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+            } else { console.error("Modal or content element not found for closeModal"); }
           }
-          function showAlert(message) { 
-            // *** 防呆：檢查元素是否存在 ***
+          function showAlert(message) {
             if(dom.alertModalText && dom.alertModal && dom.alertModalContent) {
-                dom.alertModalText.textContent = message; 
-                openModal(dom.alertModal, dom.alertModalContent); 
-            } else {
-                 console.error("Alert modal elements not found for showAlert");
-            }
+                dom.alertModalText.textContent = message;
+                openModal(dom.alertModal, dom.alertModalContent);
+            } else { console.error("Alert modal elements not found for showAlert"); }
           }
+          // *** 新增：Confirm Modal 控制函數 ***
+          let confirmCallback = null; // 用於儲存確認後要執行的函數
+          function openConfirmModal(message, onConfirm) {
+              if(dom.confirmModalText && dom.confirmModal && dom.confirmModalContent) {
+                  dom.confirmModalText.textContent = message;
+                  confirmCallback = onConfirm; // 儲存回調
+                  // 移除舊監聽器以防重複觸發
+                  dom.confirmActionBtn.removeEventListener('click', handleConfirmAction);
+                  dom.confirmActionBtn.addEventListener('click', handleConfirmAction);
+                  openModal(dom.confirmModal, dom.confirmModalContent);
+              } else { console.error("Confirm modal elements not found for openConfirmModal"); }
+          }
+          function closeConfirmModal() {
+              if(dom.confirmModal && dom.confirmModalContent) {
+                 closeModal(dom.confirmModal, dom.confirmModalContent);
+                 confirmCallback = null; // 清除回調
+              }
+          }
+          function handleConfirmAction() {
+              if (typeof confirmCallback === 'function') {
+                  confirmCallback(); // 執行儲存的回調
+              }
+              closeConfirmModal(); // 關閉 Modal
+          }
+
 
           function showToast(message, type = "info") {
               const toast = document.getElementById('toast');
               const toastContent = document.getElementById('toast-content');
-              // *** 防呆：檢查 toast 是否存在 ***
-              if (!toast || !toastContent) return; 
+              if (!toast || !toastContent) return;
               const icons = {
                   success: `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div>`,
                   error: `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg></div>`,
@@ -1335,20 +1649,25 @@
           }
 
           function setupFilters() {
-              dom.staffFilter.innerHTML = `<option value="all">所有同仁</option>${staffList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-              dom.tierFilter.innerHTML = `<option value="all">所有分級</option>${tierList.map(t => `<option value="${t}">${t}級</option>`).join('')}`;
-              dom.statusFilter.innerHTML = `<option value="all">所有狀態</option>${contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+              if(dom.staffFilter) dom.staffFilter.innerHTML = `<option value="all">所有同仁</option>${staffList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+              if(dom.tierFilter) dom.tierFilter.innerHTML = `<option value="all">所有分級</option>${tierList.map(t => `<option value="${t}">${t}級</option>`).join('')}`;
+              if(dom.statusFilter) dom.statusFilter.innerHTML = `<option value="all">所有狀態</option>${contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
           }
 
           // --- 新增/編輯 Modal ---
           function openAddEditModal() {
-              dom.addPublisherForm.reset();
-              document.getElementById('new-publisher-staff').innerHTML = staffList.map(s => `<option value="${s}">${s}</option>`).join('');
-              document.getElementById('new-publisher-tier').innerHTML = tierList.map(t => `<option value="${t}">${t}</option>`).join('');
-              document.getElementById('new-publisher-status').innerHTML = contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('');
+              if (dom.addPublisherForm) {
+                  dom.addPublisherForm.reset();
+                  const staffSelect = document.getElementById('new-publisher-staff');
+                  const tierSelect = document.getElementById('new-publisher-tier');
+                  const statusSelect = document.getElementById('new-publisher-status');
+                  if(staffSelect) staffSelect.innerHTML = staffList.map(s => `<option value="${s}">${s}</option>`).join('');
+                  if(tierSelect) tierSelect.innerHTML = tierList.map(t => `<option value="${t}">${t}</option>`).join('');
+                  if(statusSelect) statusSelect.innerHTML = contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('');
+              }
               openModal(dom.addPublisherModal, dom.addPublisherModalContent);
           }
-          
+
           async function handleSavePublisher(e) {
               e.preventDefault();
               const tagsInput = document.getElementById('new-publisher-mission-tags').value;
@@ -1362,21 +1681,28 @@
                   missionTags: tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(Boolean) : [],
                   tasks: Object.fromEntries(taskColumns.map(key => [key, null]))
               };
-              
+
               try {
                   await addDoc(state.publishersCollection, newPublisher);
                   showToast("出版社新增成功", "success");
               } catch (error) {
                   console.error("Error adding document: ", error);
                   showToast("新增失敗", "error");
+                  if (error.code === 'permission-denied') {
+                     showAlert("權限不足，無法新增。請確認 Firestore 安全規則。");
+                  }
               }
               closeModal(dom.addPublisherModal, dom.addPublisherModalContent);
           }
-          
-          // --- XLSX Import/Export ---
+
+          // --- XLSX Import/Export (保持不變) ---
+          // ... downloadTemplate, handleFileImport, normalizeDate ...
           function downloadTemplate() {
                 const baseHeaders = ["出版社名稱", "Notion 紀錄連結", "合約編號", "負責同仁", "分級", "聯繫狀態", "徵集組指定任務"];
-                const taskHeaders = taskColumns.map(key => document.querySelector(`th[data-task-header="${key}"]`).textContent);
+                const taskHeaders = taskColumns.map(key => {
+                   const headerEl = document.querySelector(`th[data-task-header="${key}"]`);
+                   return headerEl ? headerEl.textContent : key; // Fallback to key if header not found
+                });
                 const allHeaders = [...baseHeaders, ...taskHeaders];
                 const exampleRow = [ "範例出版社", "https://www.notion.so/your-page-id", "EBK00001-1", "陳玫君", "A", "聯繫中", "未合作<書>,B2B重點", "2025-08-15", ...Array(taskColumns.length - 1).fill("") ];
                 const worksheet = window.XLSX.utils.aoa_to_sheet([allHeaders, exampleRow]);
@@ -1396,17 +1722,17 @@
                       const worksheet = workbook.Sheets[sheetName];
                       const records = window.XLSX.utils.sheet_to_json(worksheet);
                       if (!records || records.length === 0) { showToast("檔案為空或格式錯誤", "error"); return; }
-                      
+
                       const batch = writeBatch(state.db);
                       let createdCount = 0, updatedCount = 0;
-                      
+
                       for (const record of records) {
                           const publisherName = record["出版社名稱"];
                           if (!publisherName) continue;
-                          
+
                           const missionTag = record["徵集組指定任務"];
                           const missionTags = (missionTag && missionTag !== "不在指定任務範圍") ? missionTag.toString().split(',').map(t => t.trim()) : [];
-                          
+
                           const publisherData = {
                               name: publisherName,
                               notionUrl: record["Notion 紀錄連結"] || null,
@@ -1418,7 +1744,8 @@
                               tasks: {}
                           };
                           taskColumns.forEach(key => {
-                              const headerText = document.querySelector(`th[data-task-header="${key}"]`).textContent;
+                              const headerEl = document.querySelector(`th[data-task-header="${key}"]`);
+                              const headerText = headerEl ? headerEl.textContent : key; // Use header text for lookup
                               if (record[headerText] !== undefined) {
                                   publisherData.tasks[key] = normalizeDate(record[headerText]);
                               }
@@ -1440,21 +1767,61 @@
               };
               reader.readAsArrayBuffer(file);
           }
-          
+
           function normalizeDate(value) {
               if (value === null || typeof value === 'undefined') return null;
-              if (typeof value === 'number') { return window.XLSX.SSF.format('yyyy-mm-dd', value); }
-              try {
-                  const date = new Date(value);
-                  if (isNaN(date.getTime())) return null;
-                  const year = date.getFullYear();
-                  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                  const day = date.getDate().toString().padStart(2, '0');
-                  return `${year}-${month}-${day}`;
-              } catch(e) { return null; }
-          }
-          
-          // --- 表四 & 表五 Card 相關函式 ---
+              if (typeof value === 'number') {
+                  // Handle Excel date serial numbers
+                  // Excel dates start from 1900-01-01 as day 1 (Windows) or 1904-01-01 (Mac)
+                  // This basic conversion assumes Windows Excel format (needs adjustment for Mac)
+                   if (value > 60) value--; // Adjust for Excel leap year bug (1900)
+                   const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+                   const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+                   if (!isNaN(date.getTime())) {
+                       const year = date.getFullYear();
+                       const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                       const day = date.getDate().toString().padStart(2, '0');
+                       return `${year}-${month}-${day}`;
+                   } else {
+                       return null; // Invalid number
+                   }
+              }
+              // Handle string dates (YYYY-MM-DD or YYYY/MM/DD)
+              if (typeof value === 'string') {
+                  value = value.replace(/\//g, '-'); // Normalize separators
+                   const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                       // Check if it's a valid date string format
+                       if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                           return value; // Already in correct format
+                       } else {
+                            // Try to format it correctly
+                           const year = date.getFullYear();
+                           const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                           const day = date.getDate().toString().padStart(2, '0');
+                           return `${year}-${month}-${day}`;
+                       }
+                    } else {
+                         return null; // Invalid string
+                    }
+              }
+               // Handle Date objects
+               if (value instanceof Date) {
+                  if (!isNaN(value.getTime())) {
+                      const year = value.getFullYear();
+                      const month = (value.getMonth() + 1).toString().padStart(2, '0');
+                      const day = value.getDate().toString().padStart(2, '0');
+                      return `${year}-${month}-${day}`;
+                  } else {
+                     return null; // Invalid date object
+                  }
+               }
+
+               return null; // Unhandled type
+            }
+
+          // --- 表四 & 表五 Card 相關函式 (保持不變) ---
+          // ... handleTierProgressFilter, handleTierCardClick, etc. ...
           function handleTierProgressFilter(e) {
               const selectedValue = e.target.value;
               document.querySelectorAll('.progress-card').forEach(card => {
@@ -1469,26 +1836,30 @@
               const cell = statEl.closest('td');
               const row = statEl.closest('tr');
               const card = statEl.closest('.progress-card');
-              
+
               const staff = card.dataset.name;
               const tier = row.dataset.tier;
               const status = cell.dataset.stage;
 
               const filtered = state.publishers.filter(p => p.staff === staff && p.tier === tier && p.contactStatus === status);
 
-              document.getElementById('publisher-list-title').textContent = `${staff} - ${tier}級 - ${status}`;
+              const listTitleEl = document.getElementById('publisher-list-title');
+              if(listTitleEl) listTitleEl.textContent = `${staff} - ${tier}級 - ${status}`;
+
               const listBody = document.getElementById('publisher-list-body');
-              listBody.innerHTML = filtered.length > 0 
-                  ? filtered.map(p => `<li>${p.name} (${p.contractId || '無編號'})</li>`).join('') 
-                  : '<li>無符合條件的出版社</li>';
-              
+              if(listBody) {
+                  listBody.innerHTML = filtered.length > 0
+                      ? filtered.map(p => `<li>${p.name} (${p.contractId || '無編號'})</li>`).join('')
+                      : '<li>無符合條件的出版社</li>';
+              }
+
               openModal(dom.publisherListModal, dom.publisherListModalContent);
           }
-          
+
           function createProgressCardHTML(name, data) {
                  let totalRow = { "母體數": 0 };
                  contactStatusList.forEach(s => totalRow[s] = 0);
-                 
+
                  let tableBody = tierList.map(tier => {
                      const tierData = data[tier];
                      if (!tierData || tierData.total === 0) return '';
@@ -1512,10 +1883,14 @@
                   const aTierRow = card.querySelector('tr[data-tier="A"]');
                   if (aTierRow) {
                       const notContactedCell = aTierRow.querySelector('td[data-stage="未聯繫"]');
-                      const total = parseInt(aTierRow.cells[aTierRow.cells.length - 1].textContent);
+                      if(!notContactedCell) return; // 防呆
+                      const totalCell = aTierRow.cells[aTierRow.cells.length - 1];
+                      if(!totalCell) return; // 防呆
+
+                      const total = parseInt(totalCell.textContent);
                       const notContactedCount = parseInt(notContactedCell.dataset.value);
                       const percentage = total > 0 ? (notContactedCount / total) * 100 : 0;
-                      
+
                       notContactedCell.classList.remove('health-warning', 'health-critical');
                       if (percentage >= 50) notContactedCell.classList.add('health-critical');
                       else if (percentage >= 25) notContactedCell.classList.add('health-warning');
@@ -1523,16 +1898,17 @@
               });
           }
 
-          // --- Export Handler ---
-          function handleExport() {
+          // --- Export Handler (保持不變) ---
+          // ... handleExport ...
+           function handleExport() {
                  const selectedCheckboxes = Array.from(document.querySelectorAll('input[name="export-option"]:checked'));
                  if(selectedCheckboxes.length === 0) {
                      showToast("請至少選擇一個要匯出的報表", "warning");
                      return;
                  }
-                 
+
                  const workbook = window.XLSX.utils.book_new();
-                 
+
                  // Info Sheet
                  const infoSheetData = [
                     ["報表匯出資訊"],
@@ -1569,21 +1945,26 @@
 
                 selectedCheckboxes.forEach(checkbox => {
                     const optionValue = checkbox.value;
-                    const data = exportFunctions[optionValue]();
-                    if (data && data.length > 0) {
-                        const worksheet = window.XLSX.utils.json_to_sheet(data);
-                        window.XLSX.utils.book_append_sheet(workbook, worksheet, sheetNames[optionValue]);
+                    if(exportFunctions[optionValue]) { // 防呆
+                        const data = exportFunctions[optionValue]();
+                        if (data && data.length > 0) {
+                            const worksheet = window.XLSX.utils.json_to_sheet(data);
+                            window.XLSX.utils.book_append_sheet(workbook, worksheet, sheetNames[optionValue]);
+                        }
                     }
                 });
-                
+
                  window.XLSX.writeFile(workbook, `徵集進度報表_${new Date().toISOString().slice(0,10)}.xlsx`);
                  showToast("報表匯出成功！", "success");
             }
-            
-            // --- Export Data Formatting ---
-            function getPublisherMasterDataForExport() {
-                return getFilteredAndSortedData().map(pub => {
+
+            // --- Export Data Formatting (保持不變) ---
+            // ... getPublisherMasterDataForExport, getTeamSigningDataForExport, etc. ...
+             function getPublisherMasterDataForExport() {
+                 // *** 修改：加入列位 ***
+                return getFilteredAndSortedData().map((pub, index) => {
                     let row = {
+                        "#": index + 1, // 列位
                         "出版社名稱": pub.name,
                         "Notion 紀錄連結": pub.notionUrl || '',
                         "合約編號": pub.contractId || '',
@@ -1592,29 +1973,52 @@
                         "聯繫狀態": pub.contactStatus,
                         "任務標籤": Array.isArray(pub.missionTags) ? pub.missionTags.join(', ') : ''
                     };
-                    taskColumns.forEach(key => {
-                        const headerText = document.querySelector(`th[data-task-header="${key}"]`).textContent;
-                        row[headerText] = pub.tasks[key] || '';
+                    taskColumns.forEach((key, colIndex) => { // 加入 colIndex
+                        const headerEl = document.querySelector(`th[data-task-header="${key}"]`);
+                        const headerText = headerEl ? headerEl.textContent : key;
+                        // *** 修改：加入字母標頭 ***
+                        const letterHeader = `${columnIndexToLetter(colIndex + 7)}_${headerText}`; // 7 = 前面的固定欄位數
+                        row[letterHeader] = pub.tasks[key] || '';
                     });
-                    return row;
+                     // *** 新增：為固定欄位加上字母標頭 ***
+                     row[`A_Notion 紀錄連結`] = row['Notion 紀錄連結']; delete row['Notion 紀錄連結'];
+                     row[`B_出版社名稱`] = row['出版社名稱']; delete row['出版社名稱'];
+                     row[`C_合約編號`] = row['合約編號']; delete row['合約編號'];
+                     row[`D_負責同仁`] = row['負責同仁']; delete row['負責同仁'];
+                     row[`E_分級`] = row['分級']; delete row['分級'];
+                     row[`F_聯繫狀態`] = row['聯繫狀態']; delete row['聯繫狀態'];
+                     row[`G_任務標籤`] = row['任務標籤']; delete row['任務標籤'];
+
+                     // 調整順序，將 '#' 放第一
+                     const orderedRow = { '#': row['#'] };
+                     delete row['#'];
+                     Object.assign(orderedRow, row);
+
+                    return orderedRow;
                 });
             }
 
             function getTeamSigningDataForExport() {
                 const header1 = ["項目", "目標_8月", "目標_9月", "目標_10月", "目標_11月", "目標_12月", "目標_家數合計", "進度_8月", "達成率_8月", "進度_9月", "達成率_9月", "進度_10月", "達成率_10月", "進度_11月", "達成率_11月", "進度_12月", "達成率_12月", "進度_家數合計", "各項目達成率", "缺口家數"];
                 const tableData = [];
-                const bodyRows = document.getElementById('kpi-table-body').rows;
-                const footerRow = document.getElementById('kpi-table-footer').rows[0];
+                const bodyEl = document.getElementById('kpi-table-body');
+                const footerEl = document.getElementById('kpi-table-footer');
+                if(!bodyEl || !footerEl) return [];
+
+                const bodyRows = bodyEl.rows;
+                const footerRow = footerEl.rows[0];
 
                 Array.from(bodyRows).forEach(row => {
                     const rowData = {};
                     Array.from(row.cells).forEach((cell, i) => { rowData[header1[i]] = cell.textContent; });
                     tableData.push(rowData);
                 });
-                
-                const footerData = {};
-                Array.from(footerRow.cells).forEach((cell, i) => { footerData[header1[i]] = cell.textContent; });
-                tableData.push(footerData);
+
+                if (footerRow) { // 防呆
+                    const footerData = {};
+                    Array.from(footerRow.cells).forEach((cell, i) => { footerData[header1[i]] = cell.textContent; });
+                    tableData.push(footerData);
+                }
                 return tableData;
             }
 
@@ -1655,7 +2059,25 @@
                 }));
             }
 
-        });
+           // *** 新增：側邊欄切換函數 ***
+           function toggleSidebar() {
+               state.isSidebarCollapsed = !state.isSidebarCollapsed;
+               applySidebarState();
+           }
+
+           // *** 新增：應用側邊欄狀態 ***
+           function applySidebarState() {
+                if (state.isSidebarCollapsed) {
+                   dom.sidebar.classList.add('collapsed');
+                   document.body.classList.add('sidebar-collapsed');
+                } else {
+                   dom.sidebar.classList.remove('collapsed');
+                   document.body.classList.remove('sidebar-collapsed');
+                }
+           }
+
+
+      }); // *** 修正：補上這個 }); ***
   </script>
 </body>
 </html>
