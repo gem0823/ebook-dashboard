@@ -136,6 +136,55 @@
      }
       #sidebar.collapsed #sidebar-toggle { right: -2.5rem; }
      #sidebar-toggle svg { width: 1.5rem; height: 1.5rem; color: #4b5563; }
+
+    /* --- 新增：複選下拉選單樣式 --- */
+    .multi-select-container { position: relative; display: inline-block; min-width: 120px; /* 基礎最小寬度 */ }
+    .multi-select-button {
+      background-color: white; border: 1px solid #d1d5db; /* border-gray-300 */
+      border-radius: 0.375rem; /* rounded-md */
+      padding: 0.5rem 2.5rem 0.5rem 0.75rem; /* py-2 pl-3 pr-10 */
+      text-align: left; width: 100%;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+      font-size: 0.875rem; /* sm:text-sm */
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .multi-select-button:focus { outline: none; border-color: #4f46e5; /* focus:border-indigo-500 */ ring: 1px; ring-color: #4f46e5; /* focus:ring-indigo-500 */ }
+    .multi-select-button .placeholder { color: #6b7280; /* text-gray-500 */ }
+    .multi-select-button .count { font-weight: 500; color: #1f2937; /* text-gray-800 */ }
+    .multi-select-button::after {
+      content: ''; display: block; position: absolute; right: 0.75rem; top: 50%;
+      transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent;
+      border-right: 5px solid transparent; border-top: 5px solid #6b7280; /* text-gray-500 */
+      pointer-events: none;
+    }
+    .multi-select-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+      background-color: white; border: 1px solid #d1d5db; /* border-gray-300 */
+      border-radius: 0.375rem; /* rounded-md */
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-lg */
+      margin-top: 0.25rem; /* mt-1 */
+      max-height: 200px; overflow-y: auto; padding: 0.5rem 0; /* py-2 */
+      display: none; /* 預設隱藏 */
+    }
+    .multi-select-dropdown.open { display: block; }
+    .multi-select-dropdown label {
+      display: flex; align-items: center; padding: 0.5rem 1rem; /* px-4 py-2 */
+      font-size: 0.875rem; /* text-sm */ color: #374151; /* text-gray-700 */
+      cursor: pointer;
+    }
+    .multi-select-dropdown label:hover { background-color: #f3f4f6; /* hover:bg-gray-100 */ }
+    .multi-select-dropdown input[type="checkbox"] {
+      margin-right: 0.75rem; /* mr-3 */
+      border-radius: 0.25rem; /* rounded */ border-color: #d1d5db; /* border-gray-300 */
+      color: #4f46e5; /* text-indigo-600 */
+    }
+    .multi-select-dropdown input[type="checkbox"]:focus { ring: #4f46e5; /* focus:ring-indigo-500 */ }
+    /* --- 結束新增 --- */
+
   </style>
 
   <!-- 整合：顯示/隱藏 的樣式 -->
@@ -211,7 +260,8 @@
               <span class="sidebar-text">登出</span>
             </button>
 
-            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.11.0 (KPI Popup Update)</p>
+            <!-- --- 修改：版本號 --- -->
+            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.13.0 (Multi-Select Filter)</p>
             <p class="text-xs text-gray-500 sidebar-text">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
         </div>
     </aside>
@@ -244,16 +294,46 @@
                             <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls">
                         </div>
                     </div>
-                    <!-- 搜尋與篩選 -->
+                    <!-- --- 修改：搜尋與篩選區域 --- -->
                     <div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b">
                         <input type="text" id="search-input" placeholder="搜尋出版社、合約編號..." class="w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <select id="staff-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
-                        <select id="tier-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
-                        <select id="status-filter" class="w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
+
+                        <!-- Staff Filter -->
+                        <div class="multi-select-container">
+                          <button id="staff-filter-button" type="button" class="multi-select-button">
+                            <span class="placeholder">選擇同仁</span>
+                          </button>
+                          <div id="staff-filter-dropdown" class="multi-select-dropdown">
+                            <!-- Checkboxes will be inserted here by JS -->
+                          </div>
+                        </div>
+
+                        <!-- Tier Filter -->
+                        <div class="multi-select-container">
+                          <button id="tier-filter-button" type="button" class="multi-select-button">
+                            <span class="placeholder">選擇分級</span>
+                          </button>
+                          <div id="tier-filter-dropdown" class="multi-select-dropdown">
+                            <!-- Checkboxes will be inserted here by JS -->
+                          </div>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="multi-select-container" style="min-width: 150px;"> <!-- 加寬一點 -->
+                          <button id="status-filter-button" type="button" class="multi-select-button">
+                            <span class="placeholder">選擇狀態</span>
+                          </button>
+                          <div id="status-filter-dropdown" class="multi-select-dropdown">
+                            <!-- Checkboxes will be inserted here by JS -->
+                          </div>
+                        </div>
+
                         <button id="clear-filters-btn" class="text-sm text-gray-600 hover:text-indigo-600">清除篩選</button>
                     </div>
+                    <!-- --- 結束修改 --- -->
                     <div class="flex justify-between items-center mb-2">
-                        <h4 class="text-sm font-semibold text-gray-500 ">&lt;表一&gt;</h4>
+                        <!-- --- 修改：表一 -> 表1 --- -->
+                        <h4 class="text-sm font-semibold text-gray-500 ">&lt;表1&gt;</h4>
                         <p id="publisher-count-info" class="text-sm text-gray-600"></p>
                     </div>
                     <div class="overflow-x-auto max-h-[65vh] table-container">
@@ -310,30 +390,26 @@
             <section id="content-team-signing" class="content-section hidden">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿徵集團體目標(中文電子書)</h3>
-                    <!-- --- 修改：原本的備註移到下方，加入新的備註 --- -->
-                    <p class="text-xs text-red-600 mb-2">*備註：如同仁未於&lt;表一&gt;填寫相應欄位的簽約移交日期，則將造成該同仁的簽約出版社無法統計至本表中；也可能造成各表統計落差。</p>
+                    <!-- --- 修改：備註文字調整 --- -->
+                    <p class="text-xs text-red-600 mb-2">*備註：如同仁未於&lt;表1&gt;填寫相應欄位的簽約移交日期，則將造成該同仁的簽約出版社無法統計至本表中；也可能造成各表統計落差。</p>
                     <p class="text-xs text-gray-500 mb-4">備註：本表中的數量為出版社品牌家數。統計時同一出版社，於此表只會被計算至一個項目，不重複計算。</p>
-                    <!-- --- 結束修改 --- -->
-                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表二&gt;</h4>
+                    <!-- --- 修改：表二 -> 表2 --- -->
+                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2&gt;</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm border-collapse kpi-table">
                             <thead>
                                 <tr class="header-group">
                                     <th rowspan="2" class="item-col">項目</th>
-                                    <!-- --- 新增：目標表頭 class --- -->
                                     <th colspan="6" class="header-group-target">目標</th>
-                                    <!-- --- 新增：進度表頭 class --- -->
                                     <th colspan="13" class="header-group-progress">進度</th>
                                 </tr>
                                 <tr class="header-sub">
-                                    <!-- 目標 -->
                                     <th class="header-group-target">8月</th>
                                     <th class="header-group-target">9月</th>
                                     <th class="header-group-target">10月</th>
                                     <th class="header-group-target">11月</th>
                                     <th class="header-group-target">12月</th>
                                     <th class="highlight header-group-target">家數合計</th>
-                                    <!-- 進度 -->
                                     <th class="header-group-progress">8月</th><th class="header-group-progress">8月達成率</th>
                                     <th class="header-group-progress">9月</th><th class="header-group-progress">9月達成率</th>
                                     <th class="header-group-progress">10月</th><th class="header-group-progress">10月達成率</th>
@@ -344,7 +420,6 @@
                                     <th class="gap-col header-group-progress">缺口家數</th>
                                 </tr>
                             </thead>
-                            <!-- --- 新增：tbody ID --- -->
                             <tbody id="kpi-table-body"></tbody>
                             <tfoot id="kpi-table-footer"></tfoot>
                         </table>
@@ -356,7 +431,8 @@
             <section id="content-individual-signing" class="content-section hidden">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-2">個人簽約率總覽</h3>
-                    <h4 class="text-sm font-semibold text-gray-500 mb-4">&lt;表三&gt;</h4>
+                    <!-- --- 修改：表三 -> 表3 --- -->
+                    <h4 class="text-sm font-semibold text-gray-500 mb-4">&lt;表3&gt;</h4>
                     <div class="overflow-x-auto rounded-lg border">
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
@@ -375,7 +451,8 @@
 
             <!-- 模組四：出版社分級聯繫進度 -->
             <section id="content-publisher-tier" class="content-section hidden">
-                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表四&gt;</h4>
+                <!-- --- 修改：表四 -> 表4 --- -->
+                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表4&gt;</h4>
                 <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <label for="progress-filter" class="text-sm font-medium text-gray-700">篩選檢視:</label>
@@ -393,7 +470,8 @@
 
             <!-- 模組五：個人聯繫進度 -->
             <section id="content-individual-contact" class="content-section hidden">
-                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表五&gt;</h4>
+                <!-- --- 修改：表五 -> 表5 --- -->
+                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表5&gt;</h4>
                 <div id="individual-contact-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </section>
 
@@ -402,25 +480,30 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">選擇要匯出的報表</h3>
                     <div class="space-y-4" id="export-options-container">
+                        <!-- --- 修改：表一 -> 表1 --- -->
                         <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="checkbox" name="export-option" value="table1" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表一&gt; 出版社母體管理</span>
+                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表1&gt; 出版社母體管理</span>
                         </label>
+                        <!-- --- 修改：表二 -> 表2 --- -->
                         <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="checkbox" name="export-option" value="table2" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表二&gt; 團隊簽約進度</span>
+                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表2&gt; 團隊簽約進度</span>
                         </label>
+                        <!-- --- 修改：表三 -> 表3 --- -->
                         <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="checkbox" name="export-option" value="table3" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表三&gt; 個人簽約進度</span>
+                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表3&gt; 個人簽約進度</span>
                         </label>
+                        <!-- --- 修改：表四 -> 表4 --- -->
                         <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="checkbox" name="export-option" value="table4" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表四&gt; 出版社分級聯繫進度</span>
+                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表4&gt; 出版社分級聯繫進度</span>
                         </label>
+                        <!-- --- 修改：表五 -> 表5 --- -->
                         <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input type="checkbox" name="export-option" value="table5" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表五&gt; 個人聯繫進度</span>
+                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表5&gt; 個人聯繫進度</span>
                         </label>
                     </div>
                     <div class="mt-6 text-right">
@@ -527,7 +610,9 @@
       document.addEventListener('DOMContentLoaded', async function () {
           // --- 設定與常數 ---
           const staffList = ["陳玫君", "陳俐吟", "李芷瑄", "李虹儀", "未分配"];
-          const tierList = ["A", "B", "C", "X"];
+          // --- 修改：移除 X 級 ---
+          const tierList = ["A", "B", "C"];
+          // --- 結束修改 ---
           const contactStatusList = ["未聯繫", "聯繫中", "已聯繫，無意願洽談", "已聯繫，有意願洽談", "審約中", "用印中", "已簽回，已移交合約"];
           // 欄位代號 G, H, I, J, K, L, M, N, O, P, Q
           const taskColumns = [
@@ -544,32 +629,24 @@
               'task_get_b2b_cn' // Q
             ];
 
-          // --- 修改：恢復 TRMS，調整 B2C 規則 ---
           const kpiTargets = {
               'B2C': {
-                  // 目標: 恢復為 [4, 6, 6, 5, 3]
                   months: [4, 6, 6, 5, 3],
-                  // 欄位: H, I, K, L, M (移除 J)
                   taskKeys: ['task_get_b2c', 'task_get_gvm', 'task_get_kingstone', 'task_get_sanmin', 'task_get_b2c_3rd']
               },
               'B2B': {
                   months: [2, 3, 3, 2, 2],
-                  // 欄位: N, O, P, Q
                   taskKeys: ['task_get_b2b', 'task_get_b2b_union', 'task_get_b2b_public', 'task_get_b2b_cn']
               },
               '未合作': {
                   months: [2, 3, 3, 3, 3],
-                  // 欄位: G
                   taskKeys: ['task_new_ebook']
               },
-              // 恢復 TRMS
               'TRMS':   {
                   months: [2, 2, 2, 2, 0],
-                  // 欄位: J
                   taskKeys: ['task_get_trms']
               }
           };
-          // --- 結束修改 ---
 
           const pageTitles = {
               publisherMaster: '出版社母體管理',
@@ -581,14 +658,16 @@
               admin: '管理員專區'
           };
           const initialData = [
-              { name: "範例出版社", staff: "未分配", tier: "X", contactStatus: "未聯繫", missionTags: ["範例標籤"], contractId: null, tasks: {} }
+              { name: "範例出版社", staff: "未分配", tier: "A", contactStatus: "未聯繫", missionTags: ["範例標籤"], contractId: null, tasks: {} } // 預設改為 A
           ];
 
           // --- 全域狀態管理 ---
           const state = {
               publishers: [],
               analytics: {},
-              filters: { search: '', staff: 'all', tier: 'all', status: 'all' },
+              // --- 修改：filters 改為儲存陣列 ---
+              filters: { search: '', staff: [], tier: [], status: [] },
+              // --- 結束修改 ---
               sort: { by: 'name', order: 'asc' },
               db: null,
               auth: null,
@@ -608,9 +687,14 @@
               dbStatus: document.getElementById('db-status'),
               masterListBody: document.getElementById('master-list-body'),
               searchInput: document.getElementById('search-input'),
-              staffFilter: document.getElementById('staff-filter'),
-              tierFilter: document.getElementById('tier-filter'),
-              statusFilter: document.getElementById('status-filter'),
+              // --- 修改：快取新的複選下拉選單元素 ---
+              staffFilterButton: document.getElementById('staff-filter-button'),
+              staffFilterDropdown: document.getElementById('staff-filter-dropdown'),
+              tierFilterButton: document.getElementById('tier-filter-button'),
+              tierFilterDropdown: document.getElementById('tier-filter-dropdown'),
+              statusFilterButton: document.getElementById('status-filter-button'),
+              statusFilterDropdown: document.getElementById('status-filter-dropdown'),
+              // --- 結束修改 ---
               publisherListModal: document.getElementById('publisher-list-modal'),
               publisherListModalContent: document.getElementById('publisher-list-modal').querySelector('.modal-content'),
               alertModal: document.getElementById('alert-modal'),
@@ -628,7 +712,6 @@
               sidebarToggle: document.getElementById('sidebar-toggle'),
               mainContent: document.getElementById('mainContent'),
               publisherCountInfo: document.getElementById('publisher-count-info'),
-              // --- 新增：表二 tbody ---
               kpiTableBody: document.getElementById('kpi-table-body'),
           };
           const loginSection = document.getElementById('loginSection');
@@ -703,7 +786,8 @@
                           });
                           updateColLetterHeaderColspan();
                           applySidebarState();
-                          renderAll();
+                          setupFilters(); // 確保篩選器選項在重新登入時正確
+                          renderAll(); // 重新渲染確保濾鏡選項更新
                           return;
                       }
 
@@ -713,11 +797,11 @@
 
                       state.publishersCollection = collection(state.db, `/artifacts/${state.appId}/public/data/publishers`);
                       renderColLetterHeader();
-                      listenToPublishers();
+                      listenToPublishers(); // 會觸發 renderAll
 
                       console.log("[偵錯 3/5] 正在設定儀表板事件監聽器...");
                       setupEventListeners();
-                      setupFilters();
+                      setupFilters(); // 初始化篩選選項
                       switchContent('publisherMaster');
 
                       if (state.currentRole === 'admin') {
@@ -780,6 +864,7 @@
 
                   state.publishers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                   state.analytics = calculateAllAnalytics(state.publishers);
+                  setupFilters(); // 更新篩選器選項 (特別是 Staff 可能會變)
                   renderAll();
                   updateDeleteSelectedButtonState();
               }, (error) => {
@@ -823,7 +908,7 @@
               }
 
                if (countInfoEl) {
-                  const isFiltered = state.filters.search || state.filters.staff !== 'all' || state.filters.tier !== 'all' || state.filters.status !== 'all';
+                  const isFiltered = state.filters.search || state.filters.staff.length > 0 || state.filters.tier.length > 0 || state.filters.status.length > 0;
                   if (isFiltered) {
                       countInfoEl.textContent = `篩選結果：共 ${filteredCount} 筆資料 (總計 ${totalCount} 筆)`;
                   } else {
@@ -951,17 +1036,18 @@
 
           function calculateIndividualSigningStats(publishers) {
                  const stats = {};
-                 staffList.forEach(s => stats[s] = { total: 0, signed: 0 });
+                 // --- 修改：動態獲取 staff 列表 ---
+                 const currentStaffList = ['未分配', ...Array.from(new Set(publishers.map(p => p.staff).filter(Boolean)))].sort((a,b) => a === '未分配' ? 1 : b === '未分配' ? -1 : a.localeCompare(b, 'zh-Hant'));
+                 // --- 結束修改 ---
+                 currentStaffList.forEach(s => stats[s] = { total: 0, signed: 0 });
                  publishers.forEach(p => {
-                    // 防呆：如果 staff 不在預設列表，加進去
-                     if (p.staff && !stats[p.staff]) {
-                         stats[p.staff] = { total: 0, signed: 0 };
-                     } else if (!p.staff) {
-                         p.staff = '未分配'; // 如果 staff 為空，歸類到未分配
+                     const staff = p.staff || '未分配';
+                     if (!stats[staff]) { // 理論上不會發生，但以防萬一
+                         stats[staff] = { total: 0, signed: 0 };
                      }
-                     stats[p.staff].total++;
+                     stats[staff].total++;
                      if (p.contactStatus === "已簽回，已移交合約") {
-                         stats[p.staff].signed++;
+                         stats[staff].signed++;
                      }
                  });
                  // 只回傳有負責單位數的同仁
@@ -975,6 +1061,7 @@
             }
 
 
+          // --- 修改：移除 X 級的計算 ---
           function calculateTierProgressStats(publishers) {
               const progressData = {};
               // 從 publishers 動態獲取所有出現過的 staff
@@ -982,35 +1069,35 @@
 
               currentStaff.forEach(staffName => {
                   progressData[staffName] = {};
-                  tierList.forEach(tier => {
+                  tierList.forEach(tier => { // tierList 已經移除了 'X'
                       progressData[staffName][tier] = { total: 0, stages: {} };
                       contactStatusList.forEach(s => progressData[staffName][tier].stages[s] = 0);
                   });
               });
 
               publishers.forEach(p => {
-                  const staff = p.staff || '未分配'; // 將空 staff 歸到未分配
+                  const staff = p.staff || '未分配';
                   const tier = p.tier;
                   const status = p.contactStatus;
 
-                  if (progressData[staff] && tier && progressData[staff][tier]) {
+                  // 只處理 A, B, C 級
+                  if (progressData[staff] && tier && tierList.includes(tier)) {
                       progressData[staff][tier].total++;
                       if (status && progressData[staff][tier].stages.hasOwnProperty(status)) {
                              progressData[staff][tier].stages[status]++;
                       } else if (status) {
                          console.warn(`發現未知的聯繫狀態: "${status}" for publisher ${p.name}`);
-                         // 可以選擇是否要將未知狀態計入某個預設分類
-                         // 例如: progressData[staff][tier].stages['其他'] = (progressData[staff][tier].stages['其他'] || 0) + 1;
                       }
                   } else {
-                      // 只在 tier 無效時報錯，因為 staff 已處理
-                      if (!tier || !progressData[staff] || !progressData[staff][tier]) {
-                          console.warn(`發現無效的 tier: "${tier}" for publisher ${p.name}, Staff: "${staff}"`);
+                      // 忽略 X 級或其他無效 tier
+                      if (tier && !tierList.includes(tier)) {
+                          // console.log(`忽略非 A, B, C 的 tier: "${tier}" for publisher ${p.name}, Staff: "${staff}"`);
                       }
                   }
               });
               return progressData;
             }
+            // --- 結束修改 ---
 
 
 
@@ -1138,6 +1225,7 @@
           }
 
 
+          // --- 修改：渲染表4時，只渲染 A, B, C 級 ---
           function renderPublisherTierProgress(progressData) {
               const container = document.getElementById('progress-cards-container');
               const filter = document.getElementById('progress-filter');
@@ -1145,7 +1233,8 @@
 
               const staffInFilter = Object.keys(progressData).sort();
 
-              container.innerHTML = staffInFilter.map(name => createProgressCardHTML(name, progressData[name])).join('') || '<p class="text-center text-gray-500 col-span-full">無資料可顯示。</p>';
+              // 只渲染有 A, B, C 級資料的卡片
+              container.innerHTML = staffInFilter.map(name => createProgressCardHTML(name, progressData[name])).filter(html => html).join('') || '<p class="text-center text-gray-500 col-span-full">無資料可顯示。</p>';
 
               const currentFilterValue = filter.value;
               filter.innerHTML = `<option value="all">顯示全部同仁</option>${staffInFilter.map(name => `<option value="${name}">${name}</option>`).join('')}`;
@@ -1154,6 +1243,7 @@
 
               applyHealthCheck();
           }
+          // --- 結束修改 ---
 
           function renderIndividualContactProgress(stats) {
                  const container = document.getElementById('individual-contact-cards-container');
@@ -1222,16 +1312,27 @@
           }
 
 
+          // --- 修改：篩選邏輯更新 ---
           function getFilteredAndSortedData() {
               let data = [...state.publishers];
+              // Search Filter
               if (state.filters.search) {
                   const searchTerm = state.filters.search.toLowerCase();
                   data = data.filter(p => p.name.toLowerCase().includes(searchTerm) || (p.contractId && p.contractId.toLowerCase().includes(searchTerm)));
               }
-              if (state.filters.staff !== 'all') data = data.filter(p => p.staff === state.filters.staff);
-              if (state.filters.tier !== 'all') data = data.filter(p => p.tier === state.filters.tier);
-              if (state.filters.status !== 'all') data = data.filter(p => p.contactStatus === state.filters.status);
+              // Multi-Select Filters
+              if (state.filters.staff.length > 0) {
+                  data = data.filter(p => state.filters.staff.includes(p.staff || '未分配')); // 考慮 '未分配'
+              }
+              if (state.filters.tier.length > 0) {
+                  data = data.filter(p => state.filters.tier.includes(p.tier));
+              }
+              if (state.filters.status.length > 0) {
+                  data = data.filter(p => state.filters.status.includes(p.contactStatus));
+              }
+              // --- 結束修改 ---
 
+              // Sort
               data.sort((a, b) => {
                   let valA = a[state.sort.by] || '';
                   let valB = b[state.sort.by] || '';
@@ -1244,6 +1345,7 @@
               });
               return data;
           }
+
 
           function updateCheckboxesAfterRender() {
               if (state.currentRole !== 'admin') return;
@@ -1309,50 +1411,100 @@
 
           // --- 事件監聽器設定 ---
           function setupEventListeners() {
+              // Navigation Links
               Object.keys(dom.navLinks).forEach(key => {
                   if(dom.navLinks[key]) {
                       dom.navLinks[key].addEventListener('click', (e) => { e.preventDefault(); switchContent(key); });
                   }
               });
 
+              // Search Filter
               dom.searchInput.addEventListener('input', e => { state.filters.search = e.target.value; renderAll(); });
-              dom.staffFilter.addEventListener('change', e => { state.filters.staff = e.target.value; renderAll(); });
-              dom.tierFilter.addEventListener('change', e => { state.filters.tier = e.target.value; renderAll(); });
-              dom.statusFilter.addEventListener('change', e => { state.filters.status = e.target.value; renderAll(); });
+
+              // --- 修改：複選下拉選單事件 ---
+              // Staff Filter Events
+              dom.staffFilterButton.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  toggleDropdown('staff');
+              });
+              dom.staffFilterDropdown.addEventListener('change', (e) => {
+                  if (e.target.type === 'checkbox') {
+                      updateMultiSelectState('staff', e.target.value, e.target.checked);
+                      renderAll();
+                  }
+              });
+
+              // Tier Filter Events
+              dom.tierFilterButton.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  toggleDropdown('tier');
+              });
+              dom.tierFilterDropdown.addEventListener('change', (e) => {
+                  if (e.target.type === 'checkbox') {
+                      updateMultiSelectState('tier', e.target.value, e.target.checked);
+                      renderAll();
+                  }
+              });
+
+              // Status Filter Events
+              dom.statusFilterButton.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  toggleDropdown('status');
+              });
+              dom.statusFilterDropdown.addEventListener('change', (e) => {
+                  if (e.target.type === 'checkbox') {
+                      updateMultiSelectState('status', e.target.value, e.target.checked);
+                      renderAll();
+                  }
+              });
+
+              // Click outside to close dropdowns
+              document.addEventListener('click', closeAllDropdowns);
+              // --- 結束修改 ---
+
+              // Clear Filters Button
               document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
 
+              // Table Header Sorting
               document.querySelector('#content-publisher-master thead').addEventListener('click', handleSort);
-              dom.masterListBody.addEventListener('change', handleRowChange);
-              dom.masterListBody.addEventListener('click', handleRowClick);
+              // Table Body Actions (Checkbox, Delete)
+              dom.masterListBody.addEventListener('change', handleRowChange); // Handles checkbox changes
+              dom.masterListBody.addEventListener('click', handleRowClick); // Handles delete button clicks
 
+              // Select All Checkbox
               dom.selectAllCheckbox.addEventListener('change', handleSelectAllChange);
+              // Delete Selected Button
               dom.deleteSelectedBtn.addEventListener('click', handleDeleteSelectedClick);
 
+              // Import/Export Buttons
               document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
               document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('file-input').click());
               document.getElementById('file-input').addEventListener('change', handleFileImport);
 
+              // Modals Closing
               document.getElementById('close-publisher-list-btn').addEventListener('click', () => closeModal(dom.publisherListModal, dom.publisherListModalContent));
               dom.publisherListModal.addEventListener('click', e => { if (e.target === dom.publisherListModal) closeModal(dom.publisherListModal, dom.publisherListModalContent); });
-
               document.getElementById('close-alert-modal-btn').addEventListener('click', () => closeModal(dom.alertModal, dom.alertModalContent));
               dom.alertModal.addEventListener('click', e => { if (e.target === dom.alertModal) closeModal(dom.alertModal, dom.alertModalContent); });
-
               dom.cancelConfirmBtn.addEventListener('click', closeConfirmModal);
               dom.confirmModal.addEventListener('click', e => { if (e.target === dom.confirmModal) closeConfirmModal(); });
 
+              // Tier Progress Card Filter/Click
               document.getElementById('progress-filter').addEventListener('change', handleTierProgressFilter);
               document.getElementById('progress-cards-container').addEventListener('click', handleTierCardClick);
 
-              // --- 新增：表二 KPI 進度點擊事件監聽 ---
+              // KPI Progress Click (Table 2)
               if (dom.kpiTableBody) {
                   dom.kpiTableBody.addEventListener('click', handleKpiProgressClick);
               }
 
+              // Export Selected Button
               document.getElementById('export-selected-btn').addEventListener('click', handleExport);
 
+              // Sidebar Toggle
               dom.sidebarToggle.addEventListener('click', toggleSidebar);
           }
+
 
           // --- 事件處理函式 ---
           function switchContent(targetId) {
@@ -1376,15 +1528,21 @@
               }
           }
 
+          // --- 修改：清除篩選邏輯 ---
           function clearFilters() {
-              state.filters = { search: '', staff: 'all', tier: 'all', status: 'all' };
+              state.filters = { search: '', staff: [], tier: [], status: [] };
               dom.searchInput.value = '';
-              dom.staffFilter.value = 'all';
-              dom.tierFilter.value = 'all';
-              dom.statusFilter.value = 'all';
-              state.selectedPublisherIds.clear();
+              // Uncheck all checkboxes
+              const filterCheckboxes = document.querySelectorAll('.multi-select-dropdown input[type="checkbox"]');
+              filterCheckboxes.forEach(cb => cb.checked = false);
+              // Reset button texts
+              updateFilterButtonText('staff');
+              updateFilterButtonText('tier');
+              updateFilterButtonText('status');
+              state.selectedPublisherIds.clear(); // 清除表格選取
               renderAll();
           }
+          // --- 結束修改 ---
 
           function handleSort(e) {
               const header = e.target.closest('.sortable-header');
@@ -1435,7 +1593,6 @@
               }
           }
 
-          // --- 修改：處理 KPI 進度點擊事件，加入同仁資訊 ---
           function handleKpiProgressClick(e) {
               const target = e.target;
               if (!target.classList.contains('kpi-progress-link') || target.dataset.count === '0') {
@@ -1496,13 +1653,11 @@
               const listBody = document.getElementById('publisher-list-body');
               if(listBody) {
                   listBody.innerHTML = filteredPublishers.length > 0
-                      // 修改這裡，加入 p.staff
                       ? filteredPublishers.map(p => `<li>${p.name} (${p.contractId || '無編號'}), ${p.staff || '未分配'}</li>`).join('')
                       : '<li>無符合條件的出版社</li>';
               }
               openModal(dom.publisherListModal, dom.publisherListModalContent);
           }
-          // --- 結束修改 ---
 
 
           // --- 刪除與選取相關函數 ---
@@ -1688,11 +1843,106 @@
               setTimeout(() => { toast.classList.remove('show'); }, 3000);
           }
 
+          // --- 修改：複選下拉選單相關函數 ---
           function setupFilters() {
-              if(dom.staffFilter) dom.staffFilter.innerHTML = `<option value="all">所有同仁</option>${staffList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-              if(dom.tierFilter) dom.tierFilter.innerHTML = `<option value="all">所有分級</option>${tierList.map(t => `<option value="${t}">${t}級</option>`).join('')}`;
-              if(dom.statusFilter) dom.statusFilter.innerHTML = `<option value="all">所有狀態</option>${contactStatusList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+              // Populate Staff Filter
+              // 從 publishers 動態獲取 staff 列表並排序
+              const currentStaffList = ['未分配', ...Array.from(new Set(state.publishers.map(p => p.staff).filter(Boolean)))].sort((a,b) => a === '未分配' ? 1 : b === '未分配' ? -1 : a.localeCompare(b, 'zh-Hant'));
+              if(dom.staffFilterDropdown) {
+                  dom.staffFilterDropdown.innerHTML = currentStaffList.map(s => `
+                      <label>
+                          <input type="checkbox" value="${s}" ${state.filters.staff.includes(s) ? 'checked' : ''}>
+                          <span>${s}</span>
+                      </label>`).join('');
+              }
+
+              // Populate Tier Filter
+              if(dom.tierFilterDropdown) {
+                  dom.tierFilterDropdown.innerHTML = tierList.map(t => `
+                      <label>
+                          <input type="checkbox" value="${t}" ${state.filters.tier.includes(t) ? 'checked' : ''}>
+                          <span>${t}級</span>
+                      </label>`).join('');
+              }
+
+              // Populate Status Filter
+              if(dom.statusFilterDropdown) {
+                  dom.statusFilterDropdown.innerHTML = contactStatusList.map(s => `
+                      <label>
+                          <input type="checkbox" value="${s}" ${state.filters.status.includes(s) ? 'checked' : ''}>
+                          <span>${s}</span>
+                      </label>`).join('');
+              }
+
+              // Update button texts initially
+              updateFilterButtonText('staff');
+              updateFilterButtonText('tier');
+              updateFilterButtonText('status');
           }
+
+          function toggleDropdown(filterType) {
+              const dropdown = dom[`${filterType}FilterDropdown`];
+              if (!dropdown) return;
+              const isOpen = dropdown.classList.contains('open');
+              closeAllDropdowns(); // Close others first
+              if (!isOpen) {
+                  dropdown.classList.add('open');
+              }
+          }
+
+          function closeAllDropdowns() {
+              if (dom.staffFilterDropdown) dom.staffFilterDropdown.classList.remove('open');
+              if (dom.tierFilterDropdown) dom.tierFilterDropdown.classList.remove('open');
+              if (dom.statusFilterDropdown) dom.statusFilterDropdown.classList.remove('open');
+          }
+
+          function updateMultiSelectState(filterType, value, isChecked) {
+              const filterArray = state.filters[filterType];
+              if (isChecked) {
+                  if (!filterArray.includes(value)) {
+                      filterArray.push(value);
+                  }
+              } else {
+                  const index = filterArray.indexOf(value);
+                  if (index > -1) {
+                      filterArray.splice(index, 1);
+                  }
+              }
+              updateFilterButtonText(filterType);
+          }
+
+          function updateFilterButtonText(filterType) {
+              const button = dom[`${filterType}FilterButton`];
+              const filterArray = state.filters[filterType];
+              const placeholder = button.querySelector('.placeholder');
+              const countSpan = button.querySelector('.count'); // 可能需要新增這個 span
+              const baseTextMap = {
+                  staff: '同仁',
+                  tier: '分級',
+                  status: '狀態'
+              };
+              const baseText = baseTextMap[filterType] || '選項';
+
+              if (!placeholder) return; // Basic check
+
+              if (filterArray.length === 0) {
+                  placeholder.textContent = `選擇${baseText}`;
+                  placeholder.style.display = 'inline';
+                  if (countSpan) countSpan.textContent = ''; // Clear count if exists
+              } else {
+                  placeholder.style.display = 'none';
+                  // Dynamically create count span if it doesn't exist
+                  let currentCountSpan = button.querySelector('.count');
+                  if (!currentCountSpan) {
+                      currentCountSpan = document.createElement('span');
+                      currentCountSpan.className = 'count';
+                      button.appendChild(currentCountSpan);
+                  }
+                  currentCountSpan.textContent = `${baseText} (${filterArray.length})`;
+              }
+          }
+          // --- 結束修改 ---
+
 
           // --- XLSX Import/Export ---
           function downloadTemplate() {
@@ -1735,7 +1985,10 @@
                               name: publisherName,
                               contractId: record["合約編號"] || null,
                               staff: record["徵集"] || record["負責同仁"] || '未分配',
-                              tier: record["分級"] || 'X',
+                              // --- 修改：匯入時若為 X 級，改存為 null 或 A (根據需求選擇) ---
+                              tier: tierList.includes(record["分級"]) ? record["分級"] : 'A', // 如果不是 A, B, C，則預設為 A
+                              // tier: tierList.includes(record["分級"]) ? record["分級"] : null, // 或者設為 null
+                              // --- 結束修改 ---
                               contactStatus: record["聯繫狀態"] || '未聯繫',
                               missionTags: missionTags,
                               tasks: {}
@@ -1873,13 +2126,17 @@
           }
 
 
+          // --- 修改：createProgressCardHTML 只處理 A, B, C ---
           function createProgressCardHTML(name, data) {
                  let totalRow = { "母體數": 0 };
                  contactStatusList.forEach(s => totalRow[s] = 0);
 
+                 // 只迭代 A, B, C
                  let tableBody = tierList.map(tier => {
                      const tierData = data[tier];
+                     // 如果沒有該級別資料或總數為0，直接返回空字串
                      if (!tierData || tierData.total === 0) return '';
+
                      let stageHtml = '';
                      contactStatusList.forEach(stage => {
                          const value = tierData.stages[stage] || 0;
@@ -1891,9 +2148,12 @@
                      return `<tr class="border-b" data-tier="${tier}"><td class="px-3 py-3 font-medium text-gray-900 text-left">${tier}級</td>${stageHtml}<td class="font-bold bg-gray-50 text-gray-800">${tierData.total}</td></tr>`;
                  }).join('');
 
+                 // 如果 A, B, C 都沒有資料，則不顯示此卡片
                  if (totalRow["母體數"] === 0) return '';
+
                  return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 progress-card" data-name="${name}"><h3 class="text-xl font-bold text-gray-800 mb-4">${name}</h3><div class="overflow-x-auto"><table class="w-full text-xs text-center text-gray-600"><thead class="bg-gray-100 text-gray-700 uppercase"><tr><th class="px-3 py-3 text-left">分級</th>${contactStatusList.map(s => `<th class="px-3 py-3">${s.replace('已聯繫，','')}</th>`).join('')}<th class="px-3 py-3 bg-gray-200 font-bold">母體數</th></tr></thead><tbody>${tableBody}<tr class="bg-gray-100 font-bold"><td class="px-3 py-4 text-gray-900 text-left">總計</td>${contactStatusList.map(s => `<td>${totalRow[s]}</td>`).join('')}<td class="bg-indigo-100 text-indigo-800">${totalRow["母體數"]}</td></tr></tbody></table></div></div>`;
             }
+            // --- 結束修改 ---
 
 
           function applyHealthCheck() {
@@ -1932,9 +2192,11 @@
                     [""],
                     ["篩選條件"],
                     ["搜尋關鍵字", state.filters.search || "(無)"],
-                    ["負責同仁", state.filters.staff === 'all' ? "(全部)" : state.filters.staff],
-                    ["分級", state.filters.tier === 'all' ? "(全部)" : state.filters.tier],
-                    ["聯繫狀態", state.filters.status === 'all' ? "(全部)" : state.filters.status],
+                    // --- 修改：匯出時顯示複選內容 ---
+                    ["負責同仁", state.filters.staff.length > 0 ? state.filters.staff.join(', ') : "(全部)"],
+                    ["分級", state.filters.tier.length > 0 ? state.filters.tier.join(', ') : "(全部)"],
+                    ["聯繫狀態", state.filters.status.length > 0 ? state.filters.status.join(', ') : "(全部)"],
+                    // --- 結束修改 ---
                     [""],
                     ["匯出的報表"],
                     ...selectedCheckboxes.map(cb => [cb.nextElementSibling.textContent.trim()])
@@ -1950,13 +2212,15 @@
                     table4: getPublisherTierDataForExport,
                     table5: getIndividualContactDataForExport,
                 };
+                // --- 修改：sheetNames 物件中的表名 ---
                 const sheetNames = {
-                    table1: "表一_出版社母體管理",
-                    table2: "表二_團隊簽約進度",
-                    table3: "表三_個人簽約進度",
-                    table4: "表四_分級聯繫進度",
-                    table5: "表五_個人聯繫進度",
+                    table1: "表1_出版社母體管理",
+                    table2: "表2_團隊簽約進度",
+                    table3: "表3_個人簽約進度",
+                    table4: "表4_分級聯繫進度",
+                    table5: "表5_個人聯繫進度",
                 };
+                // --- 結束修改 ---
 
                 selectedCheckboxes.forEach(checkbox => {
                     const optionValue = checkbox.value;
@@ -2082,13 +2346,14 @@
             }
 
 
+            // --- 修改：移除 X 級的匯出 ---
             function getPublisherTierDataForExport() {
                  const flatData = [];
                  const progressData = state.analytics.tierProgressStats;
                  // 確保先排序 staff 再處理
                  Object.keys(progressData).sort().forEach(staffName => {
-                     // 確保先排序 tier 再處理
-                     tierList.forEach(tier => { // 使用預定義的 tierList 確保順序
+                     // 確保先排序 tier (A, B, C) 再處理
+                     tierList.forEach(tier => { // tierList 已經移除了 'X'
                          if (progressData[staffName][tier]) {
                              const tierData = progressData[staffName][tier];
                              if (tierData.total > 0) {
@@ -2104,6 +2369,7 @@
                  });
                  return flatData;
             }
+            // --- 結束修改 ---
 
 
             function getIndividualContactDataForExport(){
