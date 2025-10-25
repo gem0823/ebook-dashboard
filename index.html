@@ -192,6 +192,25 @@
     #loginSection { display: flex; }
     #mainSection { display: none; }
   </style>
+<style id="nx-ux-animations">
+/* Modal & Toast micro-animations */
+.modal { opacity: 0; transform: scale(.98); }
+.modal.open { opacity: 1; transform: scale(1); transition: opacity .18s ease, transform .18s ease; }
+
+#toast { opacity: 0; transform: translateY(6px); }
+#toast.show { opacity: 1; transform: translateY(0); transition: opacity .18s ease, transform .18s ease; }
+</style>
+<style id="nx-kpi2-pink">
+/* 專屬於 <表2>（模組二 content-team-signing）的「目標 家數合計」欄位底色調整為粉紅色 */
+#content-team-signing .kpi-table th.header-group-target.highlight {
+  background-color: #ffe4e6 !important; /* 覆寫原本 .highlight 的藍色 */
+}
+/* 針對表身與表尾的第 7 欄（目標家數合計）整欄套用粉紅底 */
+#content-team-signing .kpi-table tbody td:nth-child(7),
+#content-team-signing .kpi-table tfoot td:nth-child(7) {
+  background-color: #ffe4e6 !important;
+}
+</style>
 </head>
 <!-- 新增 class="sidebar-collapsed" 預設收合 -->
 <body class="bg-gray-100 antialiased sidebar-collapsed">
@@ -752,7 +771,7 @@
               if (user) {
                   const uid = user.uid;
                   const email = user.email;
-                  const userDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", uid);
+                  const userDocRef = doc(state.db, "artifacts", state.appId, "users", uid);
                   const userDoc = await getDoc(userDocRef);
 
                   if (userDoc.exists()) {
@@ -795,7 +814,7 @@
                       dom.dbStatus.textContent = '已連接';
                       dom.dbStatus.className = 'font-semibold text-green-600';
 
-                      state.publishersCollection = collection(state.db, `/artifacts/${state.appId}/public/data/publishers`);
+                      state.publishersCollection = collection(state.db, "artifacts", state.appId, "public", "data", "publishers");
                       renderColLetterHeader();
                       listenToPublishers(); // 會觸發 renderAll
 
@@ -1739,7 +1758,7 @@
           // --- 使用者管理相關函數 ---
           async function fetchUsers() {
               if (state.auth.currentUser) {
-                 const currentUserDocRef = doc(state.db, "artifacts", "ebook-dashboard", "users", state.auth.currentUser.uid);
+                 const currentUserDocRef = doc(state.db, "artifacts", state.appId, "users", state.auth.currentUser.uid);
                  const currentUserDoc = await getDoc(currentUserDocRef);
                  if (!currentUserDoc.exists() || currentUserDoc.data().role !== 'admin') {
                     userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-red-500">權限不足，無法載入使用者清單。</td></tr>';
@@ -1747,7 +1766,7 @@
                  }
                  userListBody.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>';
                  try {
-                     const usersCollectionRef = collection(state.db, "artifacts", "ebook-dashboard", "users");
+                     const usersCollectionRef = collection(state.db, "artifacts", state.appId, "users");
                      const querySnapshot = await getDocs(usersCollectionRef);
                      const users = [];
                      querySnapshot.forEach((doc) => {
@@ -2403,6 +2422,37 @@
            }
       });
   </script>
+<script id="nx-boot">
+(()=>{
+  const apply = () => {
+    const sidebar = document.getElementById('sidebar');
+    const togglers = Array.from(document.querySelectorAll('#sidebarToggle,.sidebar-toggle,[data-action="toggle-sidebar"]'));
+    if (sidebar) {
+      const KEY = 'sidebarCollapsed';
+      const saved = localStorage.getItem(KEY);
+      if (saved === '1') sidebar.classList.add('collapsed');
+      togglers.forEach(btn => {
+        btn.addEventListener('click', () => {
+          sidebar.classList.toggle('collapsed');
+          localStorage.setItem(KEY, sidebar.classList.contains('collapsed') ? '1' : '0');
+        });
+      });
+    }
+    try {
+      if (window.state) {
+        if (!state.filters || typeof state.filters !== 'object') state.filters = {};
+        for (const k of ['staff','tier','status']) {
+          if (!Array.isArray(state.filters[k])) state.filters[k] = [];
+        }
+      }
+    } catch (e) { /* no-op */ }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, { once: true });
+  } else {
+    apply();
+  }
+})();
+</script>
 </body>
 </html>
-
