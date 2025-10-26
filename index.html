@@ -55,23 +55,21 @@
     .date-display { min-width: 100px; display: inline-block; } /* 讓日期有最小寬度 */
     .date-display.empty { color: #9ca3af; } /* 無日期時的顏色 */
 
-    /* --- 表二 KPI 表格樣式 --- */
+    /* --- 表二 KPI 表格樣式 (已重構) --- */
     .kpi-table th, .kpi-table td { text-align: center; padding: 0.75rem 0.5rem; border: 1px solid #e5e7eb; }
-    .kpi-table .header-group { font-weight: bold; }
-    /* --- 新增：目標表頭顏色 --- */
-    .kpi-table .header-group-target { background-color: #ffe4e6; } /* 淡粉紅色 */
-    /* --- 新增：進度表頭顏色 --- */
-    .kpi-table .header-group-progress { background-color: #dbeafe; } /* 淡藍色 */
+    /* .kpi-table .header-group { font-weight: bold; } */
+    /* .kpi-table .header-group-target { background-color: #ffe4e6; } */
+    /* .kpi-table .header-group-progress { background-color: #dbeafe; } */
     .kpi-table .header-sub { background-color: #f9fafb; font-size: 0.75rem; }
     .kpi-table .item-col { text-align: left; font-weight: bold; background-color: #f9fafb; }
     .kpi-table .total-row { font-weight: bold; background-color: #f3f4f6; }
     .kpi-table .highlight { background-color: #e0f2fe; }
     .kpi-table .gap-col { color: #dc2626; font-weight: bold; }
     .percentage { color: #6b7280; font-size: 0.75rem; margin-left: 4px; }
-    /* --- 新增：KPI 進度數字點擊樣式 --- */
     .kpi-progress-link { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #9ca3af; transition: all 0.2s; font-weight: 500; }
     .kpi-progress-link:hover { color: #4f46e5; text-decoration-color: #4f46e5; }
     .kpi-progress-link[data-count="0"] { color: #9ca3af; text-decoration: none; cursor: default; } /* 0 的樣式 */
+    
     /* --- 表四可點擊樣式 --- */
     .clickable-stat { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #9ca3af; transition: all 0.2s; }
     .clickable-stat:hover { color: #4f46e5; text-decoration-color: #4f46e5; }
@@ -200,17 +198,7 @@
 #toast { opacity: 0; transform: translateY(6px); }
 #toast.show { opacity: 1; transform: translateY(0); transition: opacity .18s ease, transform .18s ease; }
 </style>
-<style id="nx-kpi2-pink">
-/* 專屬於 <表2>（模組二 content-team-signing）的「目標 家數合計」欄位底色調整為粉紅色 */
-#content-team-signing .kpi-table th.header-group-target.highlight {
-  background-color: #ffe4e6 !important; /* 覆寫原本 .highlight 的藍色 */
-}
-/* 針對表身與表尾的第 7 欄（目標家數合計）整欄套用粉紅底 */
-#content-team-signing .kpi-table tbody td:nth-child(7),
-#content-team-signing .kpi-table tfoot td:nth-child(7) {
-  background-color: #ffe4e6 !important;
-}
-</style>
+<!-- (移除) 舊的 nx-kpi2-pink 樣式 -->
 </head>
 <!-- 新增 class="sidebar-collapsed" 預設收合 -->
 <body class="bg-gray-100 antialiased sidebar-collapsed">
@@ -279,8 +267,8 @@
               <span class="sidebar-text">登出</span>
             </button>
 
-            <!-- --- 修改：版本號 --- -->
-            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.13.0 (Multi-Select Filter)</p>
+            <!-- --- 修改：版本號 (v4.14.0 Table2 Refactor) --- -->
+            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.14.0 (Table2 Refactor)</p>
             <p class="text-xs text-gray-500 sidebar-text">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
         </div>
     </aside>
@@ -405,44 +393,108 @@
                 </div>
             </section>
 
-            <!-- 模組二：團隊簽約進度 -->
+            <!-- 模組二：團隊簽約進度 (已重構為 2-1 ~ 2-4) -->
             <section id="content-team-signing" class="content-section hidden">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿徵集團體目標(中文電子書)</h3>
-                    <!-- --- 修改：備註文字調整 --- -->
-                    <p class="text-xs text-red-600 mb-2">*備註：如同仁未於&lt;表1&gt;填寫相應欄位的簽約移交日期，則將造成該同仁的簽約出版社無法統計至本表中；也可能造成各表統計落差。</p>
-                    <p class="text-xs text-gray-500 mb-4">備註：本表中的數量為出版社品牌家數。統計時同一出版社，於此表只會被計算至一個項目，不重複計算。</p>
-                    <!-- --- 修改：表二 -> 表2 --- -->
-                    <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2&gt;</h4>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm border-collapse kpi-table">
-                            <thead>
-                                <tr class="header-group">
-                                    <th rowspan="2" class="item-col">項目</th>
-                                    <th colspan="6" class="header-group-target">目標</th>
-                                    <th colspan="13" class="header-group-progress">進度</th>
-                                </tr>
-                                <tr class="header-sub">
-                                    <th class="header-group-target">8月</th>
-                                    <th class="header-group-target">9月</th>
-                                    <th class="header-group-target">10月</th>
-                                    <th class="header-group-target">11月</th>
-                                    <th class="header-group-target">12月</th>
-                                    <th class="highlight header-group-target">家數合計</th>
-                                    <th class="header-group-progress">8月</th><th class="header-group-progress">8月達成率</th>
-                                    <th class="header-group-progress">9月</th><th class="header-group-progress">9月達成率</th>
-                                    <th class="header-group-progress">10月</th><th class="header-group-progress">10月達成率</th>
-                                    <th class="header-group-progress">11月</th><th class="header-group-progress">11月達成率</th>
-                                    <th class="header-group-progress">12月</th><th class="header-group-progress">12月達成率</th>
-                                    <th class="highlight header-group-progress">家數合計</th>
-                                    <th class="highlight header-group-progress">各項目達成率</th>
-                                    <th class="gap-col header-group-progress">缺口家數</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpi-table-body"></tbody>
-                            <tfoot id="kpi-table-footer"></tfoot>
-                        </table>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-8">
+                    
+                    <!-- 表 2-1: 總體目標進度 -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿中文電子書徵集團體總目標</h3>
+                        <p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，首次完成任一任務(G~Q欄)的「不重複出版社」家數。</p>
+                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-1&gt; 總體目標進度 (單位：家)</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse kpi-table">
+                                <thead class="header-sub">
+                                    <tr>
+                                        <th class="item-col">項目</th>
+                                        <th>8月</th>
+                                        <th>9月</th>
+                                        <th>10月</th>
+                                        <th>11月</th>
+                                        <th>12月</th>
+                                        <th class="highlight">總計</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpi-table-body-main">
+                                    <!-- JS 會渲染此處 -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
+                    <!-- 表 2-2: 任務完成明細 -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿各項任務完成明細</h3>
+                        <p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，完成各項指定任務的「出版社家次」。(例：A出版社同月完成2項任務，計為2家次)</p>
+                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-2&gt; 任務完成明細 (單位：家次)</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse kpi-table">
+                                <thead class="header-sub">
+                                    <tr>
+                                        <th class="item-col">任務項目</th>
+                                        <th>8月</th>
+                                        <th>9月</th>
+                                        <th>10月</th>
+                                        <th>11月</th>
+                                        <th>12月</th>
+                                        <th class="highlight">小計</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpi-table-body-detail">
+                                    <!-- JS 會渲染此處 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- 表 2-3: B2C 任務匯總 -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-3&gt; B2C 任務匯總 (單位：家次)</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm border-collapse kpi-table">
+                                    <thead class="header-sub">
+                                        <tr>
+                                            <th class="item-col">B2C 匯總</th>
+                                            <th>8月</th>
+                                            <th>9月</th>
+                                            <th>10月</th>
+                                            <th>11月</th>
+                                            <th>12月</th>
+                                            <th class="highlight">小計</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kpi-table-body-b2c">
+                                        <!-- JS 會渲染此處 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 表 2-4: B2B 任務匯總 -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-4&gt; B2B 任務匯總 (單位：家次)</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm border-collapse kpi-table">
+                                    <thead class="header-sub">
+                                        <tr>
+                                            <th class="item-col">B2B 匯總</th>
+                                            <th>8月</th>
+                                            <th>9月</th>
+                                            <th>10月</th>
+                                            <th>11月</th>
+                                            <th>12月</th>
+                                            <th class="highlight">小計</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kpi-table-body-b2b">
+                                        <!-- JS 會渲染此處 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -648,24 +700,49 @@
               'task_get_b2b_cn' // Q
             ];
 
-          const kpiTargets = {
-              'B2C': {
-                  months: [4, 6, 6, 5, 3],
-                  taskKeys: ['task_get_b2c', 'task_get_gvm', 'task_get_kingstone', 'task_get_sanmin', 'task_get_b2c_3rd']
-              },
-              'B2B': {
-                  months: [2, 3, 3, 2, 2],
-                  taskKeys: ['task_get_b2b', 'task_get_b2b_union', 'task_get_b2b_public', 'task_get_b2b_cn']
-              },
-              '未合作': {
-                  months: [2, 3, 3, 3, 3],
-                  taskKeys: ['task_new_ebook']
-              },
-              'TRMS':   {
-                  months: [2, 2, 2, 2, 0],
-                  taskKeys: ['task_get_trms']
-              }
+          // --- JS 修改 1: (替換) 更新常數 ---
+          // 移除舊的 kpiTargets
+          // --- 設定與常數 (表2重構) ---
+          const MAIN_KPI_TARGETS = [12, 12, 16, 16, 16]; // 表2-1: 8月-12月固定目標
+
+          // 表2-2: 8個子項目
+          const DETAIL_TASK_KEYS = [
+              'task_get_gvm',       // [灰熊]
+              'task_get_kingstone', // [書紐]金石堂
+              'task_get_sanmin',    // [書紐]三民
+              'task_get_b2c_3rd', // B2C經銷第三方
+              'task_get_trms',      // 電子教科書TRMS
+              'task_get_b2b_union', // B2B_聯盟
+              'task_get_b2b_public',// B2B_公圖
+              'task_get_b2b_cn'     // B2B_CN
+          ];
+          // 表2-2: 顯示名稱
+          const DETAIL_TASK_NAMES = {
+              'task_get_gvm': '取得:[灰熊]',
+              'task_get_kingstone': '取得:[書紐]金石堂',
+              'task_get_sanmin': '取得:[書紐]三民',
+              'task_get_b2c_3rd': '取得:B2C經銷第三方',
+              'task_get_trms': '取得:電子教科書TRMS',
+              'task_get_b2b_union': '取得:B2B_聯盟',
+              'task_get_b2b_public': '取得:B2B_公圖',
+              'task_get_b2b_cn': '取得:B2B_CN'
           };
+          // 表2-3: B2C 匯總
+          const B2C_TASK_KEYS = [
+              'task_get_gvm',
+              'task_get_kingstone',
+              'task_get_sanmin',
+              'task_get_b2c_3rd',
+              'task_get_trms'
+          ];
+          // 表2-4: B2B 匯總
+          const B2B_TASK_KEYS = [
+              'task_get_b2b_union',
+              'task_get_b2b_public',
+              'task_get_b2b_cn'
+          ];
+          // --- 結束 (表2重構) ---
+          // --- 結束 JS 修改 1 ---
 
           const pageTitles = {
               publisherMaster: '出版社母體管理',
@@ -731,7 +808,12 @@
               sidebarToggle: document.getElementById('sidebar-toggle'),
               mainContent: document.getElementById('mainContent'),
               publisherCountInfo: document.getElementById('publisher-count-info'),
-              kpiTableBody: document.getElementById('kpi-table-body'),
+              // --- JS 修改 2: (替換) 更新 DOM 元素快取 ---
+              kpiTableBodyMain: document.getElementById('kpi-table-body-main'),
+              kpiTableBodyDetail: document.getElementById('kpi-table-body-detail'),
+              kpiTableBodyB2C: document.getElementById('kpi-table-body-b2c'),
+              kpiTableBodyB2B: document.getElementById('kpi-table-body-b2b'),
+              // --- 結束 JS 修改 2 ---
           };
           const loginSection = document.getElementById('loginSection');
           const mainSection = document.getElementById('mainSection');
@@ -965,92 +1047,86 @@
               };
           }
 
-          // --- 輔助函數：獲取最早日期（在 calculateTeamSigningStats 外部定義，以便重用） ---
-          function getEarliestDate(pubTasks, taskKeys) {
-                if (!pubTasks) return null;
-                let earliestDate = null;
-                for (const key of taskKeys) {
-                    const dateStr = pubTasks[key];
-                    if (dateStr) {
-                        try {
-                            let date = new Date(dateStr);
-                            if (isNaN(date.getTime()) || date.getFullYear() < 1900) {
-                              const normalizedDateStr = normalizeDate(dateStr);
-                              if (normalizedDateStr) {
-                                   date = new Date(normalizedDateStr);
-                              } else {
-                                   continue;
-                              }
-                            }
-                            if (!isNaN(date.getTime()) && (!earliestDate || date < earliestDate)) {
-                                earliestDate = date;
-                            }
-                        } catch (e) {
-                            console.warn(`忽略無效日期格式: ${dateStr} for keys ${taskKeys.join(', ')}`);
-                        }
-                    }
-                }
-                return earliestDate;
-            }
+          // --- JS 修改 3: (刪除) 移除舊的輔助函數 ---
+          // 移除了舊的 getEarliestDate 函數
 
-
-          // --- 修改：恢復 TRMS 的 KPI 統計函數 ---
+          // --- JS 修改 4: (替換) 更新核心計算邏輯 ---
+          // --- 修改：(表2重構) 重寫 KPI 統計函數 ---
           function calculateTeamSigningStats(publishers) {
-              const stats = {};
-              Object.keys(kpiTargets).forEach(item => {
-                  stats[item] = {
-                      targets: kpiTargets[item].months,
-                      progress: [0, 0, 0, 0, 0] // [8月, 9月, 10月, 11月, 12月]
-                  };
+              // 初始化 4 個表格的進度
+              const mainProgress = [0, 0, 0, 0, 0]; // 表2-1: 不重複家數
+              const detailProgress = {}; // 表2-2: 家次
+              const b2cSummary = [0, 0, 0, 0, 0]; // 表2-3
+              const b2bSummary = [0, 0, 0, 0, 0]; // 表2-4
+
+              DETAIL_TASK_KEYS.forEach(key => {
+                  detailProgress[key] = [0, 0, 0, 0, 0];
               });
 
+              const publisherFirstCompletionMonth = {}; // 儲存 { pubId: earliestMonth }
+
               for (const pub of publishers) {
-                  let assigned = false;
-                  // 優先級 1: B2C
-                  let earliestDate = getEarliestDate(pub.tasks, kpiTargets['B2C'].taskKeys);
-                  if (earliestDate) {
-                      const month = earliestDate.getMonth() + 1;
-                      if (month >= 8 && month <= 12) {
-                          stats['B2C'].progress[month - 8]++;
-                      }
-                      assigned = true;
-                  }
-                  // 優先級 2: B2B
-                  if (!assigned) {
-                      earliestDate = getEarliestDate(pub.tasks, kpiTargets['B2B'].taskKeys);
-                      if (earliestDate) {
-                          const month = earliestDate.getMonth() + 1;
-                          if (month >= 8 && month <= 12) {
-                              stats['B2B'].progress[month - 8]++;
+                  let earliestMonth = null;
+
+                  // 1. 計算 (表2-1) 的不重複家數
+                  // 遍歷所有 G-Q 欄任務
+                  for (const taskKey of taskColumns) {
+                      const dateStr = pub.tasks ? pub.tasks[taskKey] : null;
+                      if (dateStr) {
+                          const date = new Date(normalizeDate(dateStr));
+                          if (!isNaN(date.getTime())) {
+                              const month = date.getMonth() + 1;
+                              if (month >= 8 && month <= 12) {
+                                  if (earliestMonth === null || month < earliestMonth) {
+                                      earliestMonth = month;
+                                  }
+                              }
                           }
-                          assigned = true;
                       }
                   }
-                  // 優先級 3: TRMS
-                  if (!assigned) {
-                       earliestDate = getEarliestDate(pub.tasks, kpiTargets['TRMS'].taskKeys);
-                       if (earliestDate) {
-                          const month = earliestDate.getMonth() + 1;
-                          if (month >= 8 && month <= 12) {
-                              stats['TRMS'].progress[month - 8]++;
-                          }
-                          assigned = true;
+                  
+                  if (earliestMonth) {
+                      publisherFirstCompletionMonth[pub.id] = earliestMonth;
+                  }
+
+                  // 2. 計算 (表2-2) 的任務明細 (家次)
+                  for (const taskKey of DETAIL_TASK_KEYS) {
+                       const dateStr = pub.tasks ? pub.tasks[taskKey] : null;
+                       if (dateStr) {
+                           const date = new Date(normalizeDate(dateStr));
+                           if (!isNaN(date.getTime())) {
+                               const month = date.getMonth() + 1;
+                               if (month >= 8 && month <= 12) {
+                                   detailProgress[taskKey][month - 8]++;
+                               }
+                           }
                        }
                   }
-                  // 優先級 4: 未合作
-                  if (!assigned) {
-                      earliestDate = getEarliestDate(pub.tasks, kpiTargets['未合作'].taskKeys);
-                      if (earliestDate) {
-                          const month = earliestDate.getMonth() + 1;
-                          if (month >= 8 && month <= 12) {
-                              stats['未合作'].progress[month - 8]++;
-                          }
-                      }
-                  }
               }
-              return stats;
+
+              // 3. 彙整 (表2-1) 的最終統計
+              Object.values(publisherFirstCompletionMonth).forEach(month => {
+                  mainProgress[month - 8]++;
+              });
+
+              // 4. 彙整 (表2-3) B2C 總和
+              B2C_TASK_KEYS.forEach(key => {
+                  for (let i = 0; i < 5; i++) {
+                      b2cSummary[i] += detailProgress[key][i];
+                  }
+              });
+
+              // 5. 彙整 (表2-4) B2B 總和
+              B2B_TASK_KEYS.forEach(key => {
+                  for (let i = 0; i < 5; i++) {
+                      b2bSummary[i] += detailProgress[key][i];
+                  }
+              });
+
+              return { mainProgress, detailProgress, b2cSummary, b2bSummary };
           }
           // --- 結束修改 ---
+          // --- 結束 JS 修改 4 ---
 
 
           function calculateIndividualSigningStats(publishers) {
@@ -1146,80 +1222,85 @@
 
 
           // --- 各模組渲染函式 ---
-           function renderTeamSigningProgress(stats) {
-              const kpiTableBody = document.getElementById('kpi-table-body');
-              const kpiTableFooter = document.getElementById('kpi-table-footer');
-              let bodyHtml = '';
-              const progressTotals = {
-                  target: { months: [0, 0, 0, 0, 0], total: 0 },
-                  progress: { months: [0, 0, 0, 0, 0], total: 0 }
+          // --- JS 修改 5: (替換) 更新渲染邏輯 ---
+          // --- 修改：(表2重構) 重寫 KPI 渲染函數 ---
+          function renderTeamSigningProgress(stats) {
+              if (!stats || !dom.kpiTableBodyMain) return; // 檢查 DOM 是否存在
+
+              const { mainProgress, detailProgress, b2cSummary, b2bSummary } = stats;
+
+              // --- 輔助函式：建立可點擊的 span ---
+              const createClickableSpan = (count, item, month, taskKey = null) => {
+                  const taskKeyAttr = taskKey ? `data-task-key="${taskKey}"` : '';
+                  return `<span class="kpi-progress-link" data-kpi-item="${item}" data-month="${month}" data-count="${count}" ${taskKeyAttr}>${count}</span>`;
               };
 
-              const kpiOrder = ['B2C', 'B2B', 'TRMS', '未合作'];
-              kpiOrder.forEach(item => {
-                  const itemStats = stats[item];
-                  if (!itemStats) {
-                     console.warn(`找不到 KPI 項目 "${item}" 的統計數據`);
-                     return;
-                  }
-                  const targetData = itemStats.targets;
-                  const progressMonths = itemStats.progress;
-                  if (!Array.isArray(targetData) || targetData.length !== 5 || !Array.isArray(progressMonths) || progressMonths.length !== 5) {
-                      console.error(`KPI 項目 "${item}" 的 target 或 progress 數據格式錯誤`);
-                      return;
-                  }
+              // --- 1. 渲染 <表2-1> (總體目標進度) ---
+              const targets = MAIN_KPI_TARGETS;
+              const targetTotal = targets.reduce((a, b) => a + b, 0);
+              const progressTotal = mainProgress.reduce((a, b) => a + b, 0);
+              const overallRate = targetTotal > 0 ? (progressTotal / targetTotal * 100).toFixed(1) : 0;
+              const gap = targetTotal - progressTotal;
+              
+              const monthlyRates = mainProgress.map((p, i) => targets[i] > 0 ? (p / targets[i] * 100).toFixed(0) : 0);
+              const gapCells = mainProgress.map((p, i) => Math.max(0, targets[i] - p));
 
-                  const targetTotal = targetData.reduce((a, b) => a + b, 0);
-                  const progressTotal = progressMonths.reduce((a, b) => a + b, 0);
-                  const overallRate = targetTotal > 0 ? (progressTotal / targetTotal * 100).toFixed(1) : 0;
-                  const gap = targetTotal - progressTotal;
-
-                  targetData.forEach((m, i) => progressTotals.target.months[i] += m);
-                  progressTotals.target.total += targetTotal;
-                  progressMonths.forEach((m, i) => progressTotals.progress.months[i] += m);
-                  progressTotals.progress.total += progressTotal;
-
-                  // --- 修改：將進度數字包裝在 span 中，並加入 data-* 屬性 ---
-                  const progressCells = progressMonths.map((p, i) => {
-                      const month = i + 8; // 8月 -> 12月
-                      return `<td><span class="kpi-progress-link" data-kpi-item="${item}" data-month="${month}" data-count="${p}">${p}</span></td>
-                              <td>${targetData[i] > 0 ? (p / targetData[i] * 100).toFixed(0) : 0}%</td>`;
-                  }).join('');
-                  // --- 結束修改 ---
-
-                  bodyHtml += `<tr>
-                      <td class="item-col">${item}</td>
-                      ${targetData.map(m => `<td>${m}</td>`).join('')}
+              dom.kpiTableBodyMain.innerHTML = `
+                  <tr class="total-row">
+                      <td class="item-col">目標</td>
+                      ${targets.map(t => `<td>${t}</td>`).join('')}
                       <td class="highlight">${targetTotal}</td>
-                      ${progressCells}
-                      <td class="highlight">${progressTotal}</td>
-                      <td class="highlight"><div class="flex items-center justify-center"><span>${overallRate}%</span><div class="w-16 bg-gray-200 rounded-full h-2.5 ml-2"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${overallRate}%"></div></div></div></td>
-                      <td class="gap-col">${gap < 0 ? 0 : gap}</td>
+                  </tr>
+                  <tr>
+                      <td class="item-col">進度</td>
+                      ${mainProgress.map((p, i) => `<td>${createClickableSpan(p, 'Main', i + 8)}</td>`).join('')}
+                      <td class="highlight">${createClickableSpan(progressTotal, 'Main', 'all')}</td>
+                  </tr>
+                  <tr>
+                      <td class="item-col">達成率</td>
+                      ${monthlyRates.map(r => `<td>${r}%</td>`).join('')}
+                      <td class="highlight">${overallRate}%</td>
+                  </tr>
+                  <tr class="gap-col">
+                      <td class="item-col" style="color: #dc2626;">缺口</td>
+                      ${gapCells.map(g => `<td>${g}</td>`).join('')}
+                      <td class="highlight">${Math.max(0, gap)}</td>
                   </tr>`;
+
+              // --- 2. 渲染 <表2-2> (任務完成明細) ---
+              let detailHtml = '';
+              DETAIL_TASK_KEYS.forEach(key => {
+                  const progress = detailProgress[key];
+                  const total = progress.reduce((a, b) => a + b, 0);
+                  detailHtml += `
+                      <tr>
+                          <td class="item-col">${DETAIL_TASK_NAMES[key] || key}</td>
+                          ${progress.map((p, i) => `<td>${createClickableSpan(p, 'Detail', i + 8, key)}</td>`).join('')}
+                          <td class="highlight">${createClickableSpan(total, 'Detail', 'all', key)}</td>
+                      </tr>`;
               });
+              dom.kpiTableBodyDetail.innerHTML = detailHtml;
 
-              if(kpiTableBody) kpiTableBody.innerHTML = bodyHtml;
+              // --- 3. 渲染 <表2-3> (B2C 任務匯總) ---
+              const b2cTotal = b2cSummary.reduce((a, b) => a + b, 0);
+              dom.kpiTableBodyB2C.innerHTML = `
+                  <tr class="total-row">
+                      <td class="item-col">B2C 匯總</td>
+                      ${b2cSummary.map((p, i) => `<td>${createClickableSpan(p, 'B2C', i + 8)}</td>`).join('')}
+                      <td class="highlight">${createClickableSpan(b2cTotal, 'B2C', 'all')}</td>
+                  </tr>`;
 
-              const footerOverallRate = progressTotals.target.total > 0 ? (progressTotals.progress.total / progressTotals.target.total * 100).toFixed(1) : 0;
-              const footerGap = progressTotals.target.total - progressTotals.progress.total;
-              // --- 修改：Footer 的進度數字也包裝起來 ---
-              const footerProgressCells = progressTotals.progress.months.map((p, i) => {
-                   const month = i + 8;
-                  return `<td><span data-kpi-item="Total" data-month="${month}" data-count="${p}">${p}</span></td>
-                          <td>${progressTotals.target.months[i] > 0 ? (p / progressTotals.target.months[i] * 100).toFixed(0) : 0}%</td>`;
-              }).join('');
-              // --- 結束修改 ---
-
-              if(kpiTableFooter) kpiTableFooter.innerHTML = `<tr class="total-row">
-                  <td class="item-col">總計</td>
-                  ${progressTotals.target.months.map(m => `<td>${m}</td>`).join('')}
-                  <td class="highlight">${progressTotals.target.total}</td>
-                  ${footerProgressCells}
-                  <td class="highlight">${progressTotals.progress.total}</td>
-                  <td class="highlight">${footerOverallRate}%</td>
-                  <td class="gap-col">${footerGap < 0 ? 0 : footerGap}</td>
-              </tr>`;
+              // --- 4. 渲染 <表2-4> (B2B 任務匯總) ---
+              const b2bTotal = b2bSummary.reduce((a, b) => a + b, 0);
+              dom.kpiTableBodyB2B.innerHTML = `
+                  <tr class="total-row">
+                      <td class="item-col">B2B 匯總</td>
+                      ${b2bSummary.map((p, i) => `<td>${createClickableSpan(p, 'B2B', i + 8)}</td>`).join('')}
+                      <td class="highlight">${createClickableSpan(b2bTotal, 'B2B', 'all')}</td>
+                  </tr>`;
           }
+          // --- 結束修改 ---
+          // --- 結束 JS 修改 5 ---
 
           function renderIndividualSigningProgress(stats) {
                  const tableBody = document.getElementById('individual-signing-body');
@@ -1512,10 +1593,10 @@
               document.getElementById('progress-filter').addEventListener('change', handleTierProgressFilter);
               document.getElementById('progress-cards-container').addEventListener('click', handleTierCardClick);
 
-              // KPI Progress Click (Table 2)
-              if (dom.kpiTableBody) {
-                  dom.kpiTableBody.addEventListener('click', handleKpiProgressClick);
-              }
+              // --- JS 修改 6: (替換) 更新點擊事件處理 ---
+              // KPI Progress Click (Table 2-1 to 2-4)
+              document.getElementById('content-team-signing').addEventListener('click', handleKpiProgressClick);
+              // --- 結束 JS 修改 6 ---
 
               // Export Selected Button
               document.getElementById('export-selected-btn').addEventListener('click', handleExport);
@@ -1612,71 +1693,128 @@
               }
           }
 
-          function handleKpiProgressClick(e) {
-              const target = e.target;
-              if (!target.classList.contains('kpi-progress-link') || target.dataset.count === '0') {
-                  return;
-              }
+          // --- JS 修改 7: (替換) 更新點擊事件處理 ---
+          // --- 修改：(表2重構) 重寫 KPI 點擊事件處理 ---
 
-              const kpiItem = target.dataset.kpiItem;
-              const month = parseInt(target.dataset.month, 10);
-
-              if (!kpiItem || isNaN(month)) {
-                  console.error("無法從點擊的元素獲取 KPI 項目或月份");
-                  return;
-              }
-
-              const targetTaskKeys = kpiTargets[kpiItem]?.taskKeys;
-              if (!targetTaskKeys) {
-                  console.error(`找不到 KPI 項目 "${kpiItem}" 的 taskKeys`);
-                  return;
-              }
-
-              const filteredPublishers = state.publishers.filter(pub => {
-                  let earliestQualifyingDate = null;
-                  let assignedKpi = null;
-                  let date = null;
-
-                  date = getEarliestDate(pub.tasks, kpiTargets['B2C'].taskKeys);
-                  if (date && (date.getMonth() + 1 === month)) {
-                      earliestQualifyingDate = date;
-                      assignedKpi = 'B2C';
-                  }
-                  if (!assignedKpi) {
-                      date = getEarliestDate(pub.tasks, kpiTargets['B2B'].taskKeys);
-                      if (date && (date.getMonth() + 1 === month)) {
-                          earliestQualifyingDate = date;
-                          assignedKpi = 'B2B';
+          // 輔助函數：取得 publisher 在 8-12 月的首次完成月份
+          function getPublisherFirstCompletionMonth(pub, taskKeys) {
+              let earliestMonth = null;
+              if (!pub.tasks) return null;
+              
+              for (const taskKey of taskKeys) {
+                  const dateStr = pub.tasks[taskKey];
+                  if (dateStr) {
+                      const date = new Date(normalizeDate(dateStr));
+                      if (!isNaN(date.getTime())) {
+                          const month = date.getMonth() + 1;
+                          if (month >= 8 && month <= 12) {
+                              if (earliestMonth === null || month < earliestMonth) {
+                                  earliestMonth = month;
+                              }
+                          }
                       }
                   }
-                   if (!assignedKpi) {
-                      date = getEarliestDate(pub.tasks, kpiTargets['TRMS'].taskKeys);
-                       if (date && (date.getMonth() + 1 === month)) {
-                          earliestQualifyingDate = date;
-                          assignedKpi = 'TRMS';
-                       }
-                  }
-                  if (!assignedKpi) {
-                      date = getEarliestDate(pub.tasks, kpiTargets['未合作'].taskKeys);
-                       if (date && (date.getMonth() + 1 === month)) {
-                          earliestQualifyingDate = date;
-                          assignedKpi = '未合作';
-                       }
-                  }
-                  return assignedKpi === kpiItem;
-              });
+              }
+              return earliestMonth;
+          }
 
+          // 輔助函數：檢查 publisher 是否在指定月份完成了特定任務
+          function checkTaskCompletionInMonth(pub, taskKey, targetMonth) {
+              if (!pub.tasks || !pub.tasks[taskKey]) return false;
+              const date = new Date(normalizeDate(pub.tasks[taskKey]));
+              if (isNaN(date.getTime())) return false;
+              
+              const month = date.getMonth() + 1;
+              if (targetMonth === 'all') {
+                  return month >= 8 && month <= 12;
+              }
+              return month === parseInt(targetMonth, 10);
+          }
+
+
+          function handleKpiProgressClick(e) {
+              const target = e.target.closest('.kpi-progress-link');
+              if (!target || target.dataset.count === '0') {
+                  return;
+              }
+
+              const kpiItem = target.dataset.kpiItem; // Main, Detail, B2C, B2B
+              const month = target.dataset.month; // 8-12, or 'all'
+              const taskKey = target.dataset.taskKey; // Only for 'Detail'
+
+              if (!kpiItem || !month) return;
+
+              let filteredPublishers = [];
+              let title = '';
+              const monthStr = (month === 'all') ? '8-12月' : `${month}月`;
+
+              switch (kpiItem) {
+                  case 'Main':
+                      // 表2-1: 尋找 "不重複" 且 "首次完成" 在該月的 publisher
+                      const targetMonthInt = (month === 'all') ? null : parseInt(month, 10);
+                      const uniquePubsMain = new Map();
+                      
+                      state.publishers.forEach(pub => {
+                          const firstMonth = getPublisherFirstCompletionMonth(pub, taskColumns);
+                          if (firstMonth) {
+                              if (month === 'all' || firstMonth === targetMonthInt) {
+                                  uniquePubsMain.set(pub.id, pub);
+                              }
+                          }
+                      });
+                      filteredPublishers = Array.from(uniquePubsMain.values());
+                      title = `${monthStr} - 總體進度 (不重複 ${filteredPublishers.length} 家)`;
+                      break;
+
+                  case 'Detail':
+                      // 表2-2: 尋找 "家次"，但清單顯示不重複的 publisher
+                      if (!taskKey) return;
+                      const uniquePubsDetail = new Map();
+                      
+                      state.publishers.forEach(pub => {
+                          if (checkTaskCompletionInMonth(pub, taskKey, month)) {
+                              uniquePubsDetail.set(pub.id, pub);
+                          }
+                      });
+                      filteredPublishers = Array.from(uniquePubsDetail.values());
+                      const taskName = DETAIL_TASK_NAMES[taskKey] || '任務';
+                      title = `${monthStr} - ${taskName} ( ${filteredPublishers.length} 家)`;
+                      break;
+
+                  case 'B2C':
+                  case 'B2B':
+                      // 表2-3/2-4: 尋找 "家次" 對應的 "不重複" publisher
+                      const keysToSearch = (kpiItem === 'B2C') ? B2C_TASK_KEYS : B2B_TASK_KEYS;
+                      const uniquePubsSummary = new Map();
+
+                      state.publishers.forEach(pub => {
+                          for (const key of keysToSearch) {
+                              if (checkTaskCompletionInMonth(pub, key, month)) {
+                                  uniquePubsSummary.set(pub.id, pub);
+                                  break; // 找到一個就跳出，確保 publisher 不重複
+                              }
+                          }
+                      });
+                      filteredPublishers = Array.from(uniquePubsSummary.values());
+                      title = `${monthStr} - ${kpiItem} 任務匯總 ( ${filteredPublishers.length} 家)`;
+                      break;
+              }
+
+              // --- 更新並顯示 Modal ---
               const listTitleEl = document.getElementById('publisher-list-title');
-              if(listTitleEl) listTitleEl.textContent = `${month}月 - ${kpiItem} (${filteredPublishers.length}家)`;
+              if(listTitleEl) listTitleEl.textContent = title;
 
               const listBody = document.getElementById('publisher-list-body');
               if(listBody) {
+                  // 依照要求，顯示出版社清單 (含同仁)
                   listBody.innerHTML = filteredPublishers.length > 0
-                      ? filteredPublishers.map(p => `<li>${p.name} (${p.contractId || '無編號'}), ${p.staff || '未分配'}</li>`).join('')
+                      ? filteredPublishers.map(p => `<li>${p.name} (${p.contractId || '無編號'}), <strong>${p.staff || '未分配'}</strong></li>`).join('')
                       : '<li>無符合條件的出版社</li>';
               }
               openModal(dom.publisherListModal, dom.publisherListModalContent);
           }
+          // --- 結束修改 ---
+          // --- 結束 JS 修改 7 ---
 
 
           // --- 刪除與選取相關函數 ---
@@ -2320,36 +2458,55 @@
                 });
             }
 
+            // --- (額外修正) 修正匯出邏輯 ---
             function getTeamSigningDataForExport() {
-                const header1 = ["項目", "目標_8月", "目標_9月", "目標_10月", "目標_11月", "目標_12月", "目標_家數合計", "進度_8月", "達成率_8月", "進度_9月", "達成率_9月", "進度_10月", "達成率_10月", "進度_11月", "達成率_11月", "進度_12月", "達成率_12月", "進度_家數合計", "各項目達成率", "缺口家數"];
+                // (表2重構) 匯出功能暫時只匯出 <表2-1>
+                const header = ["項目", "8月", "9月", "10月", "11月", "12月", "總計"];
                 const tableData = [];
-                const bodyEl = document.getElementById('kpi-table-body');
-                const footerEl = document.getElementById('kpi-table-footer');
-                if(!bodyEl || !footerEl) return [];
+                const bodyEl = document.getElementById('kpi-table-body-main');
+                if (!bodyEl) return [{ "錯誤": "找不到表2-1的資料" }];
 
-                const bodyRows = bodyEl.rows;
-                const footerRow = footerEl.rows[0];
+                // 讀取 <表2-1> 的 HTML 內容
+                try {
+                    const rows = bodyEl.rows;
+                    if (rows.length < 4) return [{ "錯誤": "表2-1 資料不完整" }];
 
-                Array.from(bodyRows).forEach(row => {
-                    const rowData = {};
-                    Array.from(row.cells).forEach((cell, i) => {
-                         let text = cell.textContent.replace('%', '');
-                         rowData[header1[i]] = isNaN(text) || text === '' ? text : Number(text); // 修正空字串問題
+                    // 1. 目標
+                    const targetData = { "項目": "目標" };
+                    Array.from(rows[0].cells).slice(1).forEach((cell, i) => {
+                        targetData[header[i+1]] = cell.textContent;
                     });
-                    tableData.push(rowData);
-                });
+                    tableData.push(targetData);
 
-                if (footerRow) {
-                    const footerData = {};
-                    Array.from(footerRow.cells).forEach((cell, i) => {
-                         let text = cell.textContent.replace('%', '');
-                         footerData[header1[i]] = isNaN(text) || text === '' ? text : Number(text); // 修正空字串問題
+                    // 2. 進度
+                    const progressData = { "項目": "進度" };
+                    Array.from(rows[1].cells).slice(1).forEach((cell, i) => {
+                        progressData[header[i+1]] = cell.textContent;
                     });
-                    tableData.push(footerData);
+                    tableData.push(progressData);
+
+                    // 3. 達成率
+                    const rateData = { "項目": "達成率" };
+                    Array.from(rows[2].cells).slice(1).forEach((cell, i) => {
+                        rateData[header[i+1]] = cell.textContent;
+                    });
+                    tableData.push(rateData);
+                    
+                    // 4. 缺口
+                    const gapData = { "項目": "缺口" };
+                    Array.from(rows[3].cells).slice(1).forEach((cell, i) => {
+                        gapData[header[i+1]] = cell.textContent;
+                    });
+                    tableData.push(gapData);
+
+                } catch (e) {
+                    console.error("匯出 表2-1 失敗:", e);
+                    return [{ "錯誤": "匯出 表2-1 失敗" }];
                 }
+                
                 return tableData;
             }
-
+            // --- 結束 (額外修正) ---
 
 
             function getIndividualSigningDataForExport() {
@@ -2445,14 +2602,4 @@
           if (!Array.isArray(state.filters[k])) state.filters[k] = [];
         }
       }
-    } catch (e) { /* no-op */ }
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', apply, { once: true });
-  } else {
-    apply();
-  }
-})();
-</script>
-</body>
-</html>
+    } catch (
