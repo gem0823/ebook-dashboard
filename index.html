@@ -1,46 +1,24 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eBook Dashboard</title>
-
-  <!-- 檔案 1: 登入頁面樣式 (AdminLTE) -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
-
-  <!-- 檔案 2: 儀表板樣式 (Tailwind & SheetJS) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-  <!-- 檔案 2: 儀表板自訂樣式 -->
-  <style>
-    /* 使用 Inter 和 Noto Sans TC 字體 */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>eBook Dashboard</title><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css"><script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
     body {
         font-family: 'Inter', 'Noto Sans TC', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        overflow-x: hidden; /* 防止水平滾動 */
+        overflow-x: hidden;
     }
 
-    /* --- 修改：增加 icon 和文字的間距 (展開時) --- */
     #sidebar:not(.collapsed) nav ul a svg {
-        margin-right: 1rem; /* 原本是 mr-3 (0.75rem)，增加到 1rem (mr-4) */
+        margin-right: 1rem;
     }
 
-    /* --- 修改：縮小所有選單 icon --- */
     #sidebar nav ul a svg {
-        width: 1rem; /* 原本是 w-5 (1.25rem) */
-        height: 1rem; /* 原本是 h-5 (1.25rem) */
-    }
-    /* 登出按鈕的 icon 也一起縮小 */
-    #logoutBtn svg {
-        width: 1rem; /* 原本是 w-4 (1rem)，保持一致 */
-        height: 1rem; /* 原本是 h-4 (1rem)，保持一致 */
+        width: 1rem;
+        height: 1rem;
     }
 
+    #logoutBtn svg {
+        width: 1rem;
+        height: 1rem;
+    }
 
     .content-section { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
     .content-section.hidden { opacity: 0; transform: translateY(10px); position: absolute; width: 100%; pointer-events: none; }
@@ -51,15 +29,12 @@
     .table-container::-webkit-scrollbar-thumb:hover { background: #818cf8; }
     .task-header-new { background-color: #e0f2fe; color: #0c4a6e; }
     .task-header-expand { background-color: #dcfce7; color: #166534; }
-     /* --- 新增：日期顯示樣式 --- */
-    .date-display { min-width: 100px; display: inline-block; } /* 讓日期有最小寬度 */
-    .date-display.empty { color: #9ca3af; } /* 無日期時的顏色 */
 
-    /* --- 表二 KPI 表格樣式 (已重構) --- */
+    .date-display { min-width: 100px; display: inline-block; }
+    .date-display.empty { color: #9ca3af; }
+
     .kpi-table th, .kpi-table td { text-align: center; padding: 0.75rem 0.5rem; border: 1px solid #e5e7eb; }
-    /* .kpi-table .header-group { font-weight: bold; } */
-    /* .kpi-table .header-group-target { background-color: #ffe4e6; } */
-    /* .kpi-table .header-group-progress { background-color: #dbeafe; } */
+
     .kpi-table .header-sub { background-color: #f9fafb; font-size: 0.75rem; }
     .kpi-table .item-col { text-align: left; font-weight: bold; background-color: #f9fafb; }
     .kpi-table .total-row { font-weight: bold; background-color: #f3f4f6; }
@@ -68,9 +43,8 @@
     .percentage { color: #6b7280; font-size: 0.75rem; margin-left: 4px; }
     .kpi-progress-link { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #9ca3af; transition: all 0.2s; font-weight: 500; }
     .kpi-progress-link:hover { color: #4f46e5; text-decoration-color: #4f46e5; }
-    .kpi-progress-link[data-count="0"] { color: #9ca3af; text-decoration: none; cursor: default; } /* 0 的樣式 */
-    
-    /* --- 表四可點擊樣式 --- */
+    .kpi-progress-link[data-count="0"] { color: #9ca3af; text-decoration: none; cursor: default; }
+
     .clickable-stat { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #9ca3af; transition: all 0.2s; }
     .clickable-stat:hover { color: #4f46e5; text-decoration-color: #4f46e5; }
 
@@ -82,14 +56,13 @@
     .sort-desc::after { content: ' ▼'; font-size: 0.6em; }
     #toast { position: fixed; top: 20px; right: 20px; transform: translateX(200%); transition: transform 0.5s ease-in-out; z-index: 100; }
     #toast.show { transform: translateX(0); }
-    /* Checkbox column width */
+
     .checkbox-col { width: 3rem; text-align: center; }
-    /* Row number column width and style */
+
     .row-number-col { width: 3.5rem; text-align: center; background-color: #f9fafb; font-weight: 500; color: #6b7280; }
-    /* Column letter header style */
+
     .col-letter-header th { background-color: #f3f4f6; font-weight: bold; text-align: center; }
 
-    /* --- 調整：欄寬調整 --- */
     .col-publisher-name { min-width: 12em; white-space: normal !important; word-break: break-word; }
     .col-contract-id { min-width: 130px; }
     .col-staff { min-width: 100px; }
@@ -97,10 +70,9 @@
     .col-mission-tags { min-width: 150px; }
     .col-action { min-width: 80px; text-align: center; }
 
-     /* --- 側邊欄收合樣式 --- */
-    #sidebar { transition: width 0.3s ease-in-out; width: 16rem; /* 預設寬度 w-64 */ }
-    /* --- 修改：增加收合時的寬度 --- */
-    #sidebar.collapsed { width: 4.5rem; /* 收合寬度 4rem -> 4.5rem */ }
+    #sidebar { transition: width 0.3s ease-in-out; width: 16rem;  }
+
+    #sidebar.collapsed { width: 4.5rem;  }
     #sidebar.collapsed .sidebar-text { display: none; }
     #sidebar.collapsed .sidebar-header-text { display: none; }
     #sidebar.collapsed .sidebar-footer > *:not(#logoutBtn):not(#db-status) { display: none; }
@@ -116,16 +88,15 @@
      #sidebar.collapsed #nav-team-signing svg,
      #sidebar.collapsed #nav-publisher-master svg { margin-right: 0 !important; }
      #sidebar.collapsed nav ul a {
-        /* justify-content: center; */
+
         padding-left: 0.75rem;
         padding-right: 0.75rem;
      }
 
      #mainContent { transition: margin-left 0.3s ease-in-out; margin-left: 16rem; }
-     /* --- 修改：配合側邊欄寬度調整 margin --- */
-     body.sidebar-collapsed #mainContent { margin-left: 4.5rem; /* 收合時 margin 4rem -> 4.5rem */ }
 
-     /* 漢堡按鈕樣式 */
+     body.sidebar-collapsed #mainContent { margin-left: 4.5rem;  }
+
      #sidebar-toggle {
         background: none; border: none; cursor: pointer; padding: 0.5rem;
         position: absolute; top: 1.25rem; right: -2.5rem;
@@ -135,533 +106,69 @@
       #sidebar.collapsed #sidebar-toggle { right: -2.5rem; }
      #sidebar-toggle svg { width: 1.5rem; height: 1.5rem; color: #4b5563; }
 
-    /* --- 新增：複選下拉選單樣式 --- */
-    .multi-select-container { position: relative; display: inline-block; min-width: 120px; /* 基礎最小寬度 */ }
+    .multi-select-container { position: relative; display: inline-block; min-width: 120px;  }
     .multi-select-button {
-      background-color: white; border: 1px solid #d1d5db; /* border-gray-300 */
-      border-radius: 0.375rem; /* rounded-md */
-      padding: 0.5rem 2.5rem 0.5rem 0.75rem; /* py-2 pl-3 pr-10 */
+      background-color: white; border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.5rem 2.5rem 0.5rem 0.75rem;
       text-align: left; width: 100%;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-      font-size: 0.875rem; /* sm:text-sm */
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      font-size: 0.875rem;
       cursor: pointer;
       position: relative;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .multi-select-button:focus { outline: none; border-color: #4f46e5; /* focus:border-indigo-500 */ ring: 1px; ring-color: #4f46e5; /* focus:ring-indigo-500 */ }
-    .multi-select-button .placeholder { color: #6b7280; /* text-gray-500 */ }
-    .multi-select-button .count { font-weight: 500; color: #1f2937; /* text-gray-800 */ }
+    .multi-select-button:focus { outline: none; border-color: #4f46e5;  ring: 1px; ring-color: #4f46e5;  }
+    .multi-select-button .placeholder { color: #6b7280;  }
+    .multi-select-button .count { font-weight: 500; color: #1f2937;  }
     .multi-select-button::after {
       content: ''; display: block; position: absolute; right: 0.75rem; top: 50%;
       transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent;
-      border-right: 5px solid transparent; border-top: 5px solid #6b7280; /* text-gray-500 */
+      border-right: 5px solid transparent; border-top: 5px solid #6b7280;
       pointer-events: none;
     }
     .multi-select-dropdown {
       position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
-      background-color: white; border: 1px solid #d1d5db; /* border-gray-300 */
-      border-radius: 0.375rem; /* rounded-md */
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-lg */
-      margin-top: 0.25rem; /* mt-1 */
-      max-height: 200px; overflow-y: auto; padding: 0.5rem 0; /* py-2 */
-      display: none; /* 預設隱藏 */
+      background-color: white; border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      margin-top: 0.25rem;
+      max-height: 200px; overflow-y: auto; padding: 0.5rem 0;
+      display: none;
     }
     .multi-select-dropdown.open { display: block; }
     .multi-select-dropdown label {
-      display: flex; align-items: center; padding: 0.5rem 1rem; /* px-4 py-2 */
-      font-size: 0.875rem; /* text-sm */ color: #374151; /* text-gray-700 */
+      display: flex; align-items: center; padding: 0.5rem 1rem;
+      font-size: 0.875rem;  color: #374151;
       cursor: pointer;
     }
-    .multi-select-dropdown label:hover { background-color: #f3f4f6; /* hover:bg-gray-100 */ }
+    .multi-select-dropdown label:hover { background-color: #f3f4f6;  }
     .multi-select-dropdown input[type="checkbox"] {
-      margin-right: 0.75rem; /* mr-3 */
-      border-radius: 0.25rem; /* rounded */ border-color: #d1d5db; /* border-gray-300 */
-      color: #4f46e5; /* text-indigo-600 */
+      margin-right: 0.75rem;
+      border-radius: 0.25rem;  border-color: #d1d5db;
+      color: #4f46e5;
     }
-    .multi-select-dropdown input[type="checkbox"]:focus { ring: #4f46e5; /* focus:ring-indigo-500 */ }
-    /* --- 結束新增 --- */
-
-  </style>
-
-  <!-- 整合：顯示/隱藏 的樣式 -->
-  <style>
-    #loginSection { display: flex; }
-    #mainSection { display: none; }
-  </style>
-<style id="nx-ux-animations">
-/* Modal & Toast micro-animations */
-.modal { opacity: 0; transform: scale(.98); }
+    .multi-select-dropdown input[type="checkbox"]:focus { ring: #4f46e5;  }</style><style>#loginSection { display: flex; }
+    #mainSection { display: none; }</style><style id="nx-ux-animations">.modal { opacity: 0; transform: scale(.98); }
 .modal.open { opacity: 1; transform: scale(1); transition: opacity .18s ease, transform .18s ease; }
 
 #toast { opacity: 0; transform: translateY(6px); }
-#toast.show { opacity: 1; transform: translateY(0); transition: opacity .18s ease, transform .18s ease; }
-</style>
-<!-- (移除) 舊的 nx-kpi2-pink 樣式 -->
-</head>
-<!-- 新增 class="sidebar-collapsed" 預設收合 -->
-<body class="bg-gray-100 antialiased sidebar-collapsed">
-
-  <!-- 🔐 登入畫面區塊 (來自 檔案 1) -->
-  <div id="loginSection" class="flex items-center justify-center min-h-screen p-4">
-    <div class="card card-primary w-full max-w-md shadow-lg">
-      <div class="card-header"><h3 class="card-title">登入 eBook Dashboard</h3></div>
-      <div class="card-body">
-        <div class="form-group">
-          <label for="loginEmail">Email</label>
-          <input type="email" class="form-control" id="loginEmail" placeholder="輸入 Email">
-        </div>
-        <div class="form-group">
-          <label for="loginPassword">密碼</label>
-          <input type="password" class="form-control" id="loginPassword" placeholder="輸入密碼">
-        </div>
-        <button class="btn btn-primary mt-3 w-100" id="loginBtn">登入</button>
-        <div id="loginError" class="text-danger text-center mt-2"></div>
-      </div>
-    </div>
+#toast.show { opacity: 1; transform: translateY(0); transition: opacity .18s ease, transform .18s ease; }</style></head><body class="bg-gray-100 antialiased sidebar-collapsed"><div id="loginSection" class="flex items-center justify-center min-h-screen p-4"><div class="card card-primary w-full max-w-md shadow-lg"><div class="card-header"><h3 class="card-title">登入 eBook Dashboard</h3></div><div class="card-body"><div class="form-group"><label for="loginEmail">Email</label><input type="email" class="form-control" id="loginEmail" placeholder="輸入 Email"></div><div class="form-group"><label for="loginPassword">密碼</label><input type="password" class="form-control" id="loginPassword" placeholder="輸入密碼"></div><button class="btn btn-primary mt-3 w-100" id="loginBtn">登入</button><div id="loginError" class="text-danger text-center mt-2"></div></div></div></div><div id="mainSection" class="flex h-screen"><aside id="sidebar" class="bg-white shadow-md flex flex-col shrink-0 relative"><button id="sidebar-toggle" title="收合/展開選單"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg></button><div class="p-6 border-b flex items-center justify-center"><div class="sidebar-header-text text-center"><p class="text-sm text-gray-500 mt-1">中文電子書徵集進度</p></div></div><nav class="flex-1 px-4 py-6 overflow-y-auto"><ul class="space-y-2"><li><a href="#" id="nav-publisher-master" class="flex items-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg><span class="sidebar-text">出版社母體管理</span></a></li><li><a href="#" id="nav-team-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-text">團隊簽約進度</span></a></li><li><a href="#" id="nav-individual-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 11h-4.17a6.12 6.12 0 0 1-5.6-3.07"/></svg><span class="sidebar-text">個人簽約進度</span></a></li><li><a href="#" id="nav-publisher-tier" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v4"/><path d="m15 13-3-3-3 3"/></svg><span class="sidebar-text">出版社分級聯繫進度</span></a></li><li><a href="#" id="nav-individual-contact" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" y1="2" x2="8" y2="4"/><line x1="16" y1="2" x2="16" y2="4"/></svg><span class="sidebar-text">個人聯繫進度</span></a></li><li class="admin-only" style="display: none;"><a href="#" id="nav-admin" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11V16"/><path d="M12 8H12.01"/><path d="M21.17 16.83A9.95 9.95 0 0 0 22 12c0-5.52-4.48-10-10-10S2 6.48 2 12a9.95 9.95 0 0 0 .83 4.17L2 22l5.17-1.17Z"/></svg><span class="sidebar-text">管理員專區</span></a></li><li class="border-t pt-2 mt-2"><a href="#" id="nav-export" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="sidebar-text">匯出報表</span></a></li></ul></nav><div class="p-4 border-t mt-auto sidebar-footer"><div id="userRoleDisplay" class="text-sm font-medium text-gray-700 mb-2 truncate">未登入</div><button id="logoutBtn" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 text-sm flex items-center justify-center gap-2"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" ><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg><span class="sidebar-text">登出</span></button><p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.14.0 (Table2 Refactor)</p><p class="text-xs text-gray-500 sidebar-text">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p></div></aside><main id="mainContent" class="flex-1 p-6 lg:p-8 overflow-y-auto"><header class="mb-8"><h2 id="main-title" class="text-3xl font-bold text-gray-900">出版社母體管理</h2></header><div class="relative"><section id="content-publisher-master" class="content-section"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><div class="flex flex-wrap justify-between items-center mb-4 gap-4"><h3 class="text-lg font-semibold text-gray-800">目標出版社清單</h3><div class="flex flex-wrap items-center gap-2"><button id="delete-selected-btn" class="admin-only bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 inline-flex items-center text-sm" style="display: none;"><svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>刪除選取</button><button id="download-template-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-700 transition-all duration-200 inline-flex items-center text-sm"><svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下載範本</button><button id="import-data-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-blue-700 transition-all duration-200 inline-flex items-center text-sm"><svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>匯入資料</button><input type="file" id="file-input" class="hidden" accept=".xlsx, .xls"></div></div><div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b"><input type="text" id="search-input" placeholder="搜尋出版社、合約編號..." class="w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><div class="multi-select-container"><button id="staff-filter-button" type="button" class="multi-select-button"><span class="placeholder">選擇同仁</span></button><div id="staff-filter-dropdown" class="multi-select-dropdown"></div></div><div class="multi-select-container"><button id="tier-filter-button" type="button" class="multi-select-button"><span class="placeholder">選擇分級</span></button><div id="tier-filter-dropdown" class="multi-select-dropdown"></div></div><div class="multi-select-container" style="min-width: 150px;"><button id="status-filter-button" type="button" class="multi-select-button"><span class="placeholder">選擇狀態</span></button><div id="status-filter-dropdown" class="multi-select-dropdown"></div></div><button id="clear-filters-btn" class="text-sm text-gray-600 hover:text-indigo-600">清除篩選</button></div><div class="flex justify-between items-center mb-2"><h4 class="text-sm font-semibold text-gray-500 ">&lt;表1&gt;</h4><p id="publisher-count-info" class="text-sm text-gray-600"></p></div><div class="overflow-x-auto max-h-[65vh] table-container"><table class="w-full text-sm text-left text-gray-600 border-collapse"><thead class="bg-gray-50 text-xs text-gray-700 uppercase sticky top-0 z-10 shadow-sm"><tr id="col-letter-header" class="col-letter-header"></tr><tr><th class="px-3 py-3 border-b border-gray-200 checkbox-col admin-only" style="display: none;"><input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"></th><th class="px-3 py-3 border-b border-gray-200 row-number-col">#</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-publisher-name" data-sort="name">出版社名稱</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-contract-id" data-sort="contractId">合約編號</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-staff" data-sort="staff">負責同仁</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-tier" data-sort="tier">分級</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contactStatus">聯繫狀態</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-mission-tags" data-sort="missionTags">任務標籤</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-new" data-task-header="task_new_ebook">取得:電子書合作</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c">取得:B2C銷售權利</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_gvm">取得:[灰熊]</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_trms">取得:電子教科書TRMS</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_kingstone">取得:[書紐]金石堂</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_sanmin">取得:[書紐]三民</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c_3rd">取得:B2C經銷第三方</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b">取得:B2B銷售權利</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_union">取得:B2B_聯盟</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_public">取得:B2B_公圖</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_cn">取得:B2B_CN</th><th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 col-action">操作</th></tr></thead><tbody id="master-list-body"><tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-gray-500">正在等待登入...</td></tr></tbody></table></div></div></section><section id="content-team-signing" class="content-section hidden"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-8"><div><h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿中文電子書徵集團體總目標</h3><p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，首次完成任一任務(G~Q欄)的「不重複出版社」家數。</p><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-1&gt; 總體目標進度 (單位：家)</h4><div class="overflow-x-auto"><table class="w-full text-sm border-collapse kpi-table"><thead class="header-sub"><tr><th class="item-col">項目</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th><th class="highlight">總計</th></tr></thead><tbody id="kpi-table-body-main"></tbody></table></div></div><div><h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿各項任務完成明細</h3><p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，完成各項指定任務的「出版社家次」。(例：A出版社同月完成2項任務，計為2家次)</p><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-2&gt; 任務完成明細 (單位：家次)</h4><div class="overflow-x-auto"><table class="w-full text-sm border-collapse kpi-table"><thead class="header-sub"><tr><th class="item-col">任務項目</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th><th class="highlight">小計</th></tr></thead><tbody id="kpi-table-body-detail"></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-3&gt; B2C 任務匯總 (單位：家次)</h4><div class="overflow-x-auto"><table class="w-full text-sm border-collapse kpi-table"><thead class="header-sub"><tr><th class="item-col">B2C 匯總</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th><th class="highlight">小計</th></tr></thead><tbody id="kpi-table-body-b2c"></tbody></table></div></div><div><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-4&gt; B2B 任務匯總 (單位：家次)</h4><div class="overflow-x-auto"><table class="w-full text-sm border-collapse kpi-table"><thead class="header-sub"><tr><th class="item-col">B2B 匯總</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th><th class="highlight">小計</th></tr></thead><tbody id="kpi-table-body-b2b"></tbody></table></div></div></div></div></section><section id="content-individual-signing" class="content-section hidden"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-lg font-semibold text-gray-800 mb-2">個人簽約率總覽</h3><h4 class="text-sm font-semibold text-gray-500 mb-4">&lt;表3&gt;</h4><div class="overflow-x-auto rounded-lg border"><table class="w-full text-sm text-left text-gray-600"><thead class="bg-gray-50 text-xs text-gray-700 uppercase"><tr><th scope="col" class="px-6 py-3">負責人</th><th scope="col" class="px-6 py-3">負責單位數</th><th scope="col" class="px-6 py-3">已簽約</th><th scope="col" class="px-6 py-3">簽約率</th></tr></thead><tbody id="individual-signing-body"></tbody></table>
+<section id="section-3-1" class="mt-8">
+  <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表3-1&gt; 個人簽約達成率（低標 18 家）</h4>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border-collapse kpi-table">
+      <thead class="header-sub">
+        <tr><th class="px-3 py-2 border text-left">負責人</th><th class="px-3 py-2 border text-right">負責單位數</th><th class="px-3 py-2 border text-right">已簽約</th><th class="px-3 py-2 border text-right">簽約率</th></tr>
+      </thead>
+      <tbody id="kpi-table-body-3-1"></tbody>
+    </table>
   </div>
-
-  <!-- 🧭 主系統區塊 (來自 檔案 2) -->
-  <div id="mainSection" class="flex h-screen">
-
-    <!-- 左側導覽選單 (來自 檔案 2，整合了 檔案 1 的登出按鈕) -->
-    <aside id="sidebar" class="bg-white shadow-md flex flex-col shrink-0 relative">
-        <!-- 新增漢堡按鈕 -->
-        <button id="sidebar-toggle" title="收合/展開選單">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-        </button>
-        <div class="p-6 border-b flex items-center justify-center">
-             <div class="sidebar-header-text text-center">
-                 <p class="text-sm text-gray-500 mt-1">中文電子書徵集進度</p>
-             </div>
-        </div>
-        <nav class="flex-1 px-4 py-6 overflow-y-auto">
-            <ul class="space-y-2">
-                <!-- 修改：移除 w-5 h-5 mr-3，讓 style 裡的 CSS 控制大小和間距 -->
-                <li><a href="#" id="nav-publisher-master" class="flex items-center px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg><span class="sidebar-text">出版社母體管理</span></a></li>
-                <li><a href="#" id="nav-team-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-text">團隊簽約進度</span></a></li>
-                <li><a href="#" id="nav-individual-signing" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 11h-4.17a6.12 6.12 0 0 1-5.6-3.07"/></svg><span class="sidebar-text">個人簽約進度</span></a></li>
-                <li><a href="#" id="nav-publisher-tier" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v4"/><path d="m15 13-3-3-3 3"/></svg><span class="sidebar-text">出版社分級聯繫進度</span></a></li>
-                <li><a href="#" id="nav-individual-contact" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" y1="2" x2="8" y2="4"/><line x1="16" y1="2" x2="16" y2="4"/></svg><span class="sidebar-text">個人聯繫進度</span></a></li>
-
-                <li class="admin-only" style="display: none;">
-                  <a href="#" id="nav-admin" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11V16"/><path d="M12 8H12.01"/><path d="M21.17 16.83A9.95 9.95 0 0 0 22 12c0-5.52-4.48-10-10-10S2 6.48 2 12a9.95 9.95 0 0 0 .83 4.17L2 22l5.17-1.17Z"/></svg>
-                    <span class="sidebar-text">管理員專區</span>
-                  </a>
-                </li>
-
-                <li class="border-t pt-2 mt-2"><a href="#" id="nav-export" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="sidebar-text">匯出報表</span></a></li>
-            </ul>
-        </nav>
-
-        <div class="p-4 border-t mt-auto sidebar-footer">
-            <div id="userRoleDisplay" class="text-sm font-medium text-gray-700 mb-2 truncate">
-              未登入
-            </div>
-            <button id="logoutBtn" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 text-sm flex items-center justify-center gap-2">
-              <svg class="shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" > <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /> </svg>
-              <span class="sidebar-text">登出</span>
-            </button>
-
-            <!-- --- 修改：版本號 (v4.14.0 Table2 Refactor) --- -->
-            <p class="text-xs text-gray-500 mt-4 sidebar-text">版本 v4.14.0 (Table2 Refactor)</p>
-            <p class="text-xs text-gray-500 sidebar-text">資料庫狀態: <span id="db-status" class="font-semibold text-gray-400">未連接</span></p>
-        </div>
-    </aside>
-
-    <!-- 右側主內容區 -->
-    <main id="mainContent" class="flex-1 p-6 lg:p-8 overflow-y-auto">
-        <header class="mb-8">
-            <h2 id="main-title" class="text-3xl font-bold text-gray-900">出版社母體管理</h2>
-        </header>
-
-        <div class="relative">
-            <!-- 模組一：出版社母體管理 -->
-            <section id="content-publisher-master" class="content-section">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                        <h3 class="text-lg font-semibold text-gray-800">目標出版社清單</h3>
-                        <div class="flex flex-wrap items-center gap-2">
-                             <button id="delete-selected-btn" class="admin-only bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200 inline-flex items-center text-sm" style="display: none;">
-                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                刪除選取
-                            </button>
-                            <button id="download-template-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-700 transition-all duration-200 inline-flex items-center text-sm">
-                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                下載範本
-                            </button>
-                            <button id="import-data-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-blue-700 transition-all duration-200 inline-flex items-center text-sm">
-                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                匯入資料
-                            </button>
-                            <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls">
-                        </div>
-                    </div>
-                    <!-- --- 修改：搜尋與篩選區域 --- -->
-                    <div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b">
-                        <input type="text" id="search-input" placeholder="搜尋出版社、合約編號..." class="w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-
-                        <!-- Staff Filter -->
-                        <div class="multi-select-container">
-                          <button id="staff-filter-button" type="button" class="multi-select-button">
-                            <span class="placeholder">選擇同仁</span>
-                          </button>
-                          <div id="staff-filter-dropdown" class="multi-select-dropdown">
-                            <!-- Checkboxes will be inserted here by JS -->
-                          </div>
-                        </div>
-
-                        <!-- Tier Filter -->
-                        <div class="multi-select-container">
-                          <button id="tier-filter-button" type="button" class="multi-select-button">
-                            <span class="placeholder">選擇分級</span>
-                          </button>
-                          <div id="tier-filter-dropdown" class="multi-select-dropdown">
-                            <!-- Checkboxes will be inserted here by JS -->
-                          </div>
-                        </div>
-
-                        <!-- Status Filter -->
-                        <div class="multi-select-container" style="min-width: 150px;"> <!-- 加寬一點 -->
-                          <button id="status-filter-button" type="button" class="multi-select-button">
-                            <span class="placeholder">選擇狀態</span>
-                          </button>
-                          <div id="status-filter-dropdown" class="multi-select-dropdown">
-                            <!-- Checkboxes will be inserted here by JS -->
-                          </div>
-                        </div>
-
-                        <button id="clear-filters-btn" class="text-sm text-gray-600 hover:text-indigo-600">清除篩選</button>
-                    </div>
-                    <!-- --- 結束修改 --- -->
-                    <div class="flex justify-between items-center mb-2">
-                        <!-- --- 修改：表一 -> 表1 --- -->
-                        <h4 class="text-sm font-semibold text-gray-500 ">&lt;表1&gt;</h4>
-                        <p id="publisher-count-info" class="text-sm text-gray-600"></p>
-                    </div>
-                    <div class="overflow-x-auto max-h-[65vh] table-container">
-                        <table class="w-full text-sm text-left text-gray-600 border-collapse">
-                            <thead class="bg-gray-50 text-xs text-gray-700 uppercase sticky top-0 z-10 shadow-sm">
-                                <tr id="col-letter-header" class="col-letter-header">
-                                    <!-- Placeholder cell(s) for checkbox and row number -->
-                                </tr>
-                                <tr>
-                                    <th class="px-3 py-3 border-b border-gray-200 checkbox-col admin-only" style="display: none;">
-                                      <input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    </th>
-                                     <th class="px-3 py-3 border-b border-gray-200 row-number-col">#</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-publisher-name" data-sort="name">出版社名稱</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-contract-id" data-sort="contractId">合約編號</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-staff" data-sort="staff">負責同仁</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-tier" data-sort="tier">分級</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header" data-sort="contactStatus">聯繫狀態</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 sortable-header col-mission-tags" data-sort="missionTags">任務標籤</th>
-                                    <!-- G欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-new" data-task-header="task_new_ebook">取得:電子書合作</th>
-                                    <!-- H欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c">取得:B2C銷售權利</th>
-                                    <!-- I欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_gvm">取得:[灰熊]</th>
-                                    <!-- J欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_trms">取得:電子教科書TRMS</th>
-                                    <!-- K欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_kingstone">取得:[書紐]金石堂</th>
-                                    <!-- L欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_sanmin">取得:[書紐]三民</th>
-                                    <!-- M欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2c_3rd">取得:B2C經銷第三方</th>
-                                    <!-- N欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b">取得:B2B銷售權利</th>
-                                    <!-- O欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_union">取得:B2B_聯盟</th>
-                                    <!-- P欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_public">取得:B2B_公圖</th>
-                                    <!-- Q欄 -->
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 task-header-expand" data-task-header="task_get_b2b_cn">取得:B2B_CN</th>
-                                    <th class="px-3 py-3 whitespace-nowrap border-b border-gray-200 col-action">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="master-list-body">
-                                <tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-gray-500">正在等待登入...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 模組二：團隊簽約進度 (已重構為 2-1 ~ 2-4) -->
-            <section id="content-team-signing" class="content-section hidden">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-8">
-                    
-                    <!-- 表 2-1: 總體目標進度 -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿中文電子書徵集團體總目標</h3>
-                        <p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，首次完成任一任務(G~Q欄)的「不重複出版社」家數。</p>
-                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-1&gt; 總體目標進度 (單位：家)</h4>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm border-collapse kpi-table">
-                                <thead class="header-sub">
-                                    <tr>
-                                        <th class="item-col">項目</th>
-                                        <th>8月</th>
-                                        <th>9月</th>
-                                        <th>10月</th>
-                                        <th>11月</th>
-                                        <th>12月</th>
-                                        <th class="highlight">總計</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="kpi-table-body-main">
-                                    <!-- JS 會渲染此處 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- 表 2-2: 任務完成明細 -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">2025年8~12月＿各項任務完成明細</h3>
-                        <p class="text-xs text-red-600 mb-2">*備註：統計 8~12 月期間，完成各項指定任務的「出版社家次」。(例：A出版社同月完成2項任務，計為2家次)</p>
-                        <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-2&gt; 任務完成明細 (單位：家次)</h4>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm border-collapse kpi-table">
-                                <thead class="header-sub">
-                                    <tr>
-                                        <th class="item-col">任務項目</th>
-                                        <th>8月</th>
-                                        <th>9月</th>
-                                        <th>10月</th>
-                                        <th>11月</th>
-                                        <th>12月</th>
-                                        <th class="highlight">小計</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="kpi-table-body-detail">
-                                    <!-- JS 會渲染此處 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- 表 2-3: B2C 任務匯總 -->
-                        <div>
-                            <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-3&gt; B2C 任務匯總 (單位：家次)</h4>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm border-collapse kpi-table">
-                                    <thead class="header-sub">
-                                        <tr>
-                                            <th class="item-col">B2C 匯總</th>
-                                            <th>8月</th>
-                                            <th>9月</th>
-                                            <th>10月</th>
-                                            <th>11月</th>
-                                            <th>12月</th>
-                                            <th class="highlight">小計</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="kpi-table-body-b2c">
-                                        <!-- JS 會渲染此處 -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- 表 2-4: B2B 任務匯總 -->
-                        <div>
-                            <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表2-4&gt; B2B 任務匯總 (單位：家次)</h4>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm border-collapse kpi-table">
-                                    <thead class="header-sub">
-                                        <tr>
-                                            <th class="item-col">B2B 匯總</th>
-                                            <th>8月</th>
-                                            <th>9月</th>
-                                            <th>10月</th>
-                                            <th>11月</th>
-                                            <th>12月</th>
-                                            <th class="highlight">小計</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="kpi-table-body-b2b">
-                                        <!-- JS 會渲染此處 -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- 模組三：個人簽約進度 -->
-            <section id="content-individual-signing" class="content-section hidden">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">個人簽約率總覽</h3>
-                    <!-- --- 修改：表三 -> 表3 --- -->
-                    <h4 class="text-sm font-semibold text-gray-500 mb-4">&lt;表3&gt;</h4>
-                    <div class="overflow-x-auto rounded-lg border">
-                        <table class="w-full text-sm text-left text-gray-600">
-                            <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">負責人</th>
-                                    <th scope="col" class="px-6 py-3">負責單位數</th>
-                                    <th scope="col" class="px-6 py-3">已簽約</th>
-                                    <th scope="col" class="px-6 py-3">簽約率</th>
-                                </tr>
-                            </thead>
-                            <tbody id="individual-signing-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 模組四：出版社分級聯繫進度 -->
-            <section id="content-publisher-tier" class="content-section hidden">
-                <!-- --- 修改：表四 -> 表4 --- -->
-                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表4&gt;</h4>
-                <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-4">
-                        <label for="progress-filter" class="text-sm font-medium text-gray-700">篩選檢視:</label>
-                        <select id="progress-filter" class="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select>
-                    </div>
-                    <div class="text-xs text-gray-600 flex items-center gap-4">
-                        <span class="font-bold">分級定義:</span>
-                        <span><span class="font-semibold text-red-600">A級:</span> 最重要</span>
-                        <span><span class="font-semibold text-yellow-600">B級:</span> 次之</span>
-                        <span><span class="font-semibold text-blue-600">C級:</span> 一般</span>
-                    </div>
-                </div>
-                <div id="progress-cards-container" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
-            </section>
-
-            <!-- 模組五：個人聯繫進度 -->
-            <section id="content-individual-contact" class="content-section hidden">
-                <!-- --- 修改：表五 -> 表5 --- -->
-                <h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表5&gt;</h4>
-                <div id="individual-contact-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            </section>
-
-            <!-- 模組六：匯出報表 -->
-            <section id="content-export" class="content-section hidden">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">選擇要匯出的報表</h3>
-                    <div class="space-y-4" id="export-options-container">
-                        <!-- --- 修改：表一 -> 表1 --- -->
-                        <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="export-option" value="table1" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表1&gt; 出版社母體管理</span>
-                        </label>
-                        <!-- --- 修改：表二 -> 表2 --- -->
-                        <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="export-option" value="table2" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表2&gt; 團隊簽約進度</span>
-                        </label>
-                        <!-- --- 修改：表三 -> 表3 --- -->
-                        <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="export-option" value="table3" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表3&gt; 個人簽約進度</span>
-                        </label>
-                        <!-- --- 修改：表四 -> 表4 --- -->
-                        <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="export-option" value="table4" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表4&gt; 出版社分級聯繫進度</span>
-                        </label>
-                        <!-- --- 修改：表五 -> 表5 --- -->
-                        <label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="export-option" value="table5" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm font-medium text-gray-800">&lt;表5&gt; 個人聯繫進度</span>
-                        </label>
-                    </div>
-                    <div class="mt-6 text-right">
-                        <button id="export-selected-btn" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-green-700 transition-all duration-200 inline-flex items-center text-sm">
-                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            匯出所選報表
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 管理員專區：使用者管理 (移除角色變更功能) -->
-            <section id="content-admin" class="content-section hidden">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">使用者帳號管理</h3>
-
-                    <div class="overflow-x-auto rounded-lg border">
-                        <table class="w-full text-sm text-left text-gray-600">
-                            <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">使用者 Email</th>
-                                    <th scope="col" class="px-6 py-3">目前角色</th>
-                                </tr>
-                            </thead>
-                            <tbody id="user-list-body">
-                                <tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                     <p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號或變更權限，請洽林芝(至 Firebase Authentication 主控台操作。)</p>
-                </div>
-            </section>
-
-        </div>
-    </main>
-  </div><!-- /#mainSection -->
-
-  <!-- Modals -->
-  <div id="publisher-list-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
-      <div id="publisher-list-modal-content" class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0">
-          <div class="p-6 border-b flex justify-between items-center">
-              <h3 class="text-lg font-bold text-gray-800" id="publisher-list-title">出版社清單</h3>
-              <button id="close-publisher-list-btn" class="text-gray-400 hover:text-gray-600">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-              </button>
-          </div>
-          <div class="p-6 max-h-[60vh] overflow-y-auto"><ul id="publisher-list-body" class="space-y-2 text-sm text-gray-700 list-disc list-inside"></ul></div>
-      </div>
-  </div>
-  <!-- Alert Modal -->
-  <div id="alert-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
-      <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0">
-          <div class="p-6 text-center">
-              <svg class="w-16 h-16 mx-auto text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <h3 class="mt-4 text-lg font-medium text-gray-900">操作提醒</h3>
-              <p id="alert-modal-text" class="mt-2 text-sm text-gray-600"></p>
-          </div>
-          <div class="p-4 bg-gray-50 rounded-b-xl text-center">
-              <button id="close-alert-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">我知道了</button>
-          </div>
-      </div>
-  </div>
-
-  <!-- Confirm Modal -->
-  <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50">
-      <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0">
-          <div class="p-6 text-center">
-              <svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <h3 class="mt-4 text-lg font-medium text-gray-900">確認操作</h3>
-              <p id="confirm-modal-text" class="mt-2 text-sm text-gray-600"></p>
-          </div>
-          <div class="p-4 bg-gray-50 rounded-b-xl text-center space-x-2">
-              <button id="cancel-confirm-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">取消</button>
-              <button id="confirm-action-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">確認刪除</button>
-          </div>
-      </div>
-  </div>
-
-  <!-- Toast Notification -->
-  <div id="toast" class="">
-      <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert">
-      </div>
-  </div>
-
-  <!-- Firebase Config -->
-  <script>
-    const __app_id = "ebook-dashboard";
+  <p class="text-xs text-gray-500 mt-2">※ 以每人低標 18 家計算達成率。資料來源：&lt;表3&gt; 個人簽約明細。</p>
+</section>
+</div></div></section><section id="content-publisher-tier" class="content-section hidden"><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表4&gt;</h4><div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4"><div class="flex items-center gap-4"><label for="progress-filter" class="text-sm font-medium text-gray-700">篩選檢視:</label><select id="progress-filter" class="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></select></div><div class="text-xs text-gray-600 flex items-center gap-4"><span class="font-bold">分級定義:</span><span><span class="font-semibold text-red-600">A級:</span> 最重要</span><span><span class="font-semibold text-yellow-600">B級:</span> 次之</span><span><span class="font-semibold text-blue-600">C級:</span> 一般</span></div></div><div id="progress-cards-container" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div></section><section id="content-individual-contact" class="content-section hidden"><h4 class="text-sm font-semibold text-gray-500 mb-2">&lt;表5&gt;</h4><div id="individual-contact-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div></section><section id="content-export" class="content-section hidden"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-lg font-semibold text-gray-800 mb-4">選擇要匯出的報表</h3><div class="space-y-4" id="export-options-container"><label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"><input type="checkbox" name="export-option" value="table1" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm font-medium text-gray-800">&lt;表1&gt; 出版社母體管理</span></label><label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"><input type="checkbox" name="export-option" value="table2" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm font-medium text-gray-800">&lt;表2&gt; 團隊簽約進度</span></label><label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"><input type="checkbox" name="export-option" value="table3" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm font-medium text-gray-800">&lt;表3&gt; 個人簽約進度</span></label><label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"><input type="checkbox" name="export-option" value="table4" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm font-medium text-gray-800">&lt;表4&gt; 出版社分級聯繫進度</span></label><label class="flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"><input type="checkbox" name="export-option" value="table5" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm font-medium text-gray-800">&lt;表5&gt; 個人聯繫進度</span></label></div><div class="mt-6 text-right"><button id="export-selected-btn" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-green-700 transition-all duration-200 inline-flex items-center text-sm"><svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>匯出所選報表</button></div></div></section><section id="content-admin" class="content-section hidden"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-lg font-semibold text-gray-800 mb-4">使用者帳號管理</h3><div class="overflow-x-auto rounded-lg border"><table class="w-full text-sm text-left text-gray-600"><thead class="bg-gray-100 text-xs text-gray-700 uppercase"><tr><th scope="col" class="px-6 py-3">使用者 Email</th><th scope="col" class="px-6 py-3">目前角色</th></tr></thead><tbody id="user-list-body"><tr><td colspan="2" class="text-center py-10 text-gray-500">正在載入使用者清單...</td></tr></tbody></table></div><p class="text-xs text-gray-500 mt-4">*注意：新增使用者帳號或變更權限，請洽林芝(至 Firebase Authentication 主控台操作。)</p></div></section></div></main></div><div id="publisher-list-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50"><div id="publisher-list-modal-content" class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0"><div class="p-6 border-b flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800" id="publisher-list-title">出版社清單</h3><button id="close-publisher-list-btn" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div><div class="p-6 max-h-[60vh] overflow-y-auto"><ul id="publisher-list-body" class="space-y-2 text-sm text-gray-700 list-disc list-inside"></ul></div></div></div><div id="alert-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50"><div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0"><div class="p-6 text-center"><svg class="w-16 h-16 mx-auto text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg><h3 class="mt-4 text-lg font-medium text-gray-900">操作提醒</h3><p id="alert-modal-text" class="mt-2 text-sm text-gray-600"></p></div><div class="p-4 bg-gray-50 rounded-b-xl text-center"><button id="close-alert-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">我知道了</button></div></div></div><div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center p-4 z-50"><div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0"><div class="p-6 text-center"><svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg><h3 class="mt-4 text-lg font-medium text-gray-900">確認操作</h3><p id="confirm-modal-text" class="mt-2 text-sm text-gray-600"></p></div><div class="p-4 bg-gray-50 rounded-b-xl text-center space-x-2"><button id="cancel-confirm-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">取消</button><button id="confirm-action-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">確認刪除</button></div></div></div><div id="toast" class=""><div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div></div><script>const __app_id = "ebook-dashboard";
     const __firebase_config = JSON.stringify({
       apiKey: "AIzaSyA735uIwaSCjz09KwI0SNXgvmTwmk5kzXA",
       authDomain: "ebook-dashboard-a0148.firebaseapp.com",
@@ -669,23 +176,18 @@
       storageBucket: "ebook-dashboard-a0148.firebasestorage.app",
       messagingSenderId: "127405787765",
       appId: "1:127405787765:web:72631dc3d362466660c63c"
-    });
-  </script>
-
-  <!-- 整合後的 Script (V11 Modular SDK) -->
-  <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    });</script><script type="module">import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
       import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
       import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, writeBatch, setDoc, getDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
       document.addEventListener('DOMContentLoaded', async function () {
-          // --- 設定與常數 ---
+
           const staffList = ["陳玫君", "陳俐吟", "李芷瑄", "李虹儀", "未分配"];
-          // --- 修改：移除 X 級 ---
+
           const tierList = ["A", "B", "C"];
-          // --- 結束修改 ---
+
           const contactStatusList = ["未聯繫", "聯繫中", "已聯繫，無意願洽談", "已聯繫，有意願洽談", "審約中", "用印中", "已簽回，已移交合約"];
-          // 欄位代號 G, H, I, J, K, L, M, N, O, P, Q
+
           const taskColumns = [
               'task_new_ebook', // G
               'task_get_b2c', // H
@@ -700,12 +202,8 @@
               'task_get_b2b_cn' // Q
             ];
 
-          // --- JS 修改 1: (替換) 更新常數 ---
-          // 移除舊的 kpiTargets
-          // --- 設定與常數 (表2重構) ---
           const MAIN_KPI_TARGETS = [12, 12, 16, 16, 16]; // 表2-1: 8月-12月固定目標
 
-          // 表2-2: 8個子項目
           const DETAIL_TASK_KEYS = [
               'task_get_gvm',       // [灰熊]
               'task_get_kingstone', // [書紐]金石堂
@@ -716,7 +214,7 @@
               'task_get_b2b_public',// B2B_公圖
               'task_get_b2b_cn'     // B2B_CN
           ];
-          // 表2-2: 顯示名稱
+
           const DETAIL_TASK_NAMES = {
               'task_get_gvm': '取得:[灰熊]',
               'task_get_kingstone': '取得:[書紐]金石堂',
@@ -727,7 +225,7 @@
               'task_get_b2b_public': '取得:B2B_公圖',
               'task_get_b2b_cn': '取得:B2B_CN'
           };
-          // 表2-3: B2C 匯總
+
           const B2C_TASK_KEYS = [
               'task_get_gvm',
               'task_get_kingstone',
@@ -735,14 +233,12 @@
               'task_get_b2c_3rd',
               'task_get_trms'
           ];
-          // 表2-4: B2B 匯總
+
           const B2B_TASK_KEYS = [
               'task_get_b2b_union',
               'task_get_b2b_public',
               'task_get_b2b_cn'
           ];
-          // --- 結束 (表2重構) ---
-          // --- 結束 JS 修改 1 ---
 
           const pageTitles = {
               publisherMaster: '出版社母體管理',
@@ -757,13 +253,12 @@
               { name: "範例出版社", staff: "未分配", tier: "A", contactStatus: "未聯繫", missionTags: ["範例標籤"], contractId: null, tasks: {} } // 預設改為 A
           ];
 
-          // --- 全域狀態管理 ---
           const state = {
               publishers: [],
               analytics: {},
-              // --- 修改：filters 改為儲存陣列 ---
+
               filters: { search: '', staff: [], tier: [], status: [] },
-              // --- 結束修改 ---
+
               sort: { by: 'name', order: 'asc' },
               db: null,
               auth: null,
@@ -775,7 +270,6 @@
               isSidebarCollapsed: true,
           };
 
-          // --- DOM 元素快取 ---
           const dom = {
               navLinks: Object.fromEntries(Object.keys(pageTitles).map(id => [id, document.getElementById(`nav-${id.replace('publisherMaster', 'publisher-master').replace('teamSigning','team-signing').replace('individualSigning','individual-signing').replace('publisherTier','publisher-tier').replace('individualContact','individual-contact')}`)])),
               contentSections: Object.fromEntries(Object.keys(pageTitles).map(id => [id, document.getElementById(`content-${id.replace('publisherMaster', 'publisher-master').replace('teamSigning','team-signing').replace('individualSigning','individual-signing').replace('publisherTier','publisher-tier').replace('individualContact','individual-contact')}`)])),
@@ -783,14 +277,14 @@
               dbStatus: document.getElementById('db-status'),
               masterListBody: document.getElementById('master-list-body'),
               searchInput: document.getElementById('search-input'),
-              // --- 修改：快取新的複選下拉選單元素 ---
+
               staffFilterButton: document.getElementById('staff-filter-button'),
               staffFilterDropdown: document.getElementById('staff-filter-dropdown'),
               tierFilterButton: document.getElementById('tier-filter-button'),
               tierFilterDropdown: document.getElementById('tier-filter-dropdown'),
               statusFilterButton: document.getElementById('status-filter-button'),
               statusFilterDropdown: document.getElementById('status-filter-dropdown'),
-              // --- 結束修改 ---
+
               publisherListModal: document.getElementById('publisher-list-modal'),
               publisherListModalContent: document.getElementById('publisher-list-modal').querySelector('.modal-content'),
               alertModal: document.getElementById('alert-modal'),
@@ -808,12 +302,12 @@
               sidebarToggle: document.getElementById('sidebar-toggle'),
               mainContent: document.getElementById('mainContent'),
               publisherCountInfo: document.getElementById('publisher-count-info'),
-              // --- JS 修改 2: (替換) 更新 DOM 元素快取 ---
+
               kpiTableBodyMain: document.getElementById('kpi-table-body-main'),
               kpiTableBodyDetail: document.getElementById('kpi-table-body-detail'),
               kpiTableBodyB2C: document.getElementById('kpi-table-body-b2c'),
               kpiTableBodyB2B: document.getElementById('kpi-table-body-b2b'),
-              // --- 結束 JS 修改 2 ---
+
           };
           const loginSection = document.getElementById('loginSection');
           const mainSection = document.getElementById('mainSection');
@@ -825,7 +319,6 @@
           const userRoleDisplay = document.getElementById('userRoleDisplay');
           const userListBody = document.getElementById('user-list-body');
 
-          // --- Firebase 核心功能 ---
           try {
               state.appId = typeof __app_id !== 'undefined' ? __app_id : 'ebook-dashboard';
               const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
@@ -848,7 +341,6 @@
               return;
           }
 
-          // --- 登入/登出/權限邏輯 ---
           onAuthStateChanged(state.auth, async (user) => {
               if (user) {
                   const uid = user.uid;
@@ -858,7 +350,6 @@
 
                   if (userDoc.exists()) {
                       state.currentRole = userDoc.data().role;
-                      console.log(`%c[偵錯 1/5] 登入成功，權限已確認 (Role: ${state.currentRole})`, "color: blue; font-weight: bold;");
 
                       loginSection.style.display = 'none';
                       mainSection.style.display = 'flex';
@@ -878,7 +369,7 @@
                       updateColLetterHeaderColspan();
 
                       if (state.isDashboardInitialized) {
-                          console.log("[偵錯] 儀表板已初始化，跳過重複設定。");
+
                           document.querySelectorAll('.admin-only').forEach(el => {
                                if (el.tagName === 'LI') { el.style.display = displayStyle;}
                                else if (el.tagName === 'BUTTON'){ el.style.display = displayStyleBlock; }
@@ -892,7 +383,6 @@
                           return;
                       }
 
-                      console.log("[偵錯 2/5] 正在初始化儀表板...");
                       dom.dbStatus.textContent = '已連接';
                       dom.dbStatus.className = 'font-semibold text-green-600';
 
@@ -900,7 +390,6 @@
                       renderColLetterHeader();
                       listenToPublishers(); // 會觸發 renderAll
 
-                      console.log("[偵錯 3/5] 正在設定儀表板事件監聽器...");
                       setupEventListeners();
                       setupFilters(); // 初始化篩選選項
                       switchContent('publisherMaster');
@@ -955,13 +444,9 @@
             signOut(state.auth).then(() => location.reload());
           });
 
-
-          // --- 儀表板核心功能 ---
-
           function listenToPublishers() {
-              console.log(`%c[偵錯 4/5] 正在附加 Snapshot 監聽器至: ${state.publishersCollection.path}`, "color: blue;");
+
               onSnapshot(state.publishersCollection, async (snapshot) => {
-                  console.log(`%c[偵錯 5/5] Snapshot 成功接收! (空集合: ${snapshot.empty}, 文件數: ${snapshot.size})`, "color: green; font-weight: bold;");
 
                   state.publishers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                   state.analytics = calculateAllAnalytics(state.publishers);
@@ -974,9 +459,8 @@
               });
           }
 
-          // --- 核心渲染邏輯 ---
           function renderAll() {
-              console.log("%c[偵錯 6/6] renderAll() 啟動. 正在渲染所有模組...", "color: green;");
+
               try {
                 const filteredAndSorted = getFilteredAndSortedData();
                 renderMasterList(filteredAndSorted);
@@ -985,7 +469,7 @@
                 renderPublisherTierProgress(state.analytics.tierProgressStats);
                 renderIndividualContactProgress(state.analytics.individualContactStats);
                 updateCheckboxesAfterRender();
-                console.log("%c[偵錯] 渲染完畢!", "color: green;");
+
               } catch (error) {
                   console.error("%c[偵錯 失敗] 渲染 (Render) 過程中發生錯誤:", "color: red; font-weight: bold;", error);
                   dom.masterListBody.innerHTML = `<tr class="bg-white border-b"><td colspan="20" class="text-center py-10 text-red-500">渲染資料時發生錯誤: ${error.message}</td></tr>`;
@@ -1037,7 +521,6 @@
                });
           }
 
-          // --- 資料分析與計算 ---
            function calculateAllAnalytics(publishers) {
               return {
                   teamSigningStats: calculateTeamSigningStats(publishers),
@@ -1047,13 +530,8 @@
               };
           }
 
-          // --- JS 修改 3: (刪除) 移除舊的輔助函數 ---
-          // 移除了舊的 getEarliestDate 函數
-
-          // --- JS 修改 4: (替換) 更新核心計算邏輯 ---
-          // --- 修改：(表2重構) 重寫 KPI 統計函數 ---
           function calculateTeamSigningStats(publishers) {
-              // 初始化 4 個表格的進度
+
               const mainProgress = [0, 0, 0, 0, 0]; // 表2-1: 不重複家數
               const detailProgress = {}; // 表2-2: 家次
               const b2cSummary = [0, 0, 0, 0, 0]; // 表2-3
@@ -1068,8 +546,6 @@
               for (const pub of publishers) {
                   let earliestMonth = null;
 
-                  // 1. 計算 (表2-1) 的不重複家數
-                  // 遍歷所有 G-Q 欄任務
                   for (const taskKey of taskColumns) {
                       const dateStr = pub.tasks ? pub.tasks[taskKey] : null;
                       if (dateStr) {
@@ -1084,12 +560,11 @@
                           }
                       }
                   }
-                  
+
                   if (earliestMonth) {
                       publisherFirstCompletionMonth[pub.id] = earliestMonth;
                   }
 
-                  // 2. 計算 (表2-2) 的任務明細 (家次)
                   for (const taskKey of DETAIL_TASK_KEYS) {
                        const dateStr = pub.tasks ? pub.tasks[taskKey] : null;
                        if (dateStr) {
@@ -1104,19 +579,16 @@
                   }
               }
 
-              // 3. 彙整 (表2-1) 的最終統計
               Object.values(publisherFirstCompletionMonth).forEach(month => {
                   mainProgress[month - 8]++;
               });
 
-              // 4. 彙整 (表2-3) B2C 總和
               B2C_TASK_KEYS.forEach(key => {
                   for (let i = 0; i < 5; i++) {
                       b2cSummary[i] += detailProgress[key][i];
                   }
               });
 
-              // 5. 彙整 (表2-4) B2B 總和
               B2B_TASK_KEYS.forEach(key => {
                   for (let i = 0; i < 5; i++) {
                       b2bSummary[i] += detailProgress[key][i];
@@ -1125,15 +597,12 @@
 
               return { mainProgress, detailProgress, b2cSummary, b2bSummary };
           }
-          // --- 結束修改 ---
-          // --- 結束 JS 修改 4 ---
-
 
           function calculateIndividualSigningStats(publishers) {
                  const stats = {};
-                 // --- 修改：動態獲取 staff 列表 ---
+
                  const currentStaffList = ['未分配', ...Array.from(new Set(publishers.map(p => p.staff).filter(Boolean)))].sort((a,b) => a === '未分配' ? 1 : b === '未分配' ? -1 : a.localeCompare(b, 'zh-Hant'));
-                 // --- 結束修改 ---
+
                  currentStaffList.forEach(s => stats[s] = { total: 0, signed: 0 });
                  publishers.forEach(p => {
                      const staff = p.staff || '未分配';
@@ -1145,7 +614,7 @@
                          stats[staff].signed++;
                      }
                  });
-                 // 只回傳有負責單位數的同仁
+
                  return Object.entries(stats)
                     .filter(([, data]) => data.total > 0)
                     .map(([name, data]) => ({
@@ -1155,11 +624,9 @@
                     }));
             }
 
-
-          // --- 修改：移除 X 級的計算 ---
           function calculateTierProgressStats(publishers) {
               const progressData = {};
-              // 從 publishers 動態獲取所有出現過的 staff
+
               const currentStaff = Array.from(new Set(publishers.map(p => p.staff || '未分配'))).sort();
 
               currentStaff.forEach(staffName => {
@@ -1175,7 +642,6 @@
                   const tier = p.tier;
                   const status = p.contactStatus;
 
-                  // 只處理 A, B, C 級
                   if (progressData[staff] && tier && tierList.includes(tier)) {
                       progressData[staff][tier].total++;
                       if (status && progressData[staff][tier].stages.hasOwnProperty(status)) {
@@ -1184,33 +650,30 @@
                          console.warn(`發現未知的聯繫狀態: "${status}" for publisher ${p.name}`);
                       }
                   } else {
-                      // 忽略 X 級或其他無效 tier
+
                       if (tier && !tierList.includes(tier)) {
-                          // console.log(`忽略非 A, B, C 的 tier: "${tier}" for publisher ${p.name}, Staff: "${staff}"`);
+
                       }
                   }
               });
               return progressData;
             }
-            // --- 結束修改 ---
-
-
 
           function calculateIndividualContactStats(publishers) {
                 const stats = {};
-                // 從 publishers 動態獲取所有出現過的 staff
+
                 const currentStaff = Array.from(new Set(publishers.map(p => p.staff || '未分配'))).sort();
                 currentStaff.forEach(s => stats[s] = { total: 0, contacted: 0 });
 
                  publishers.forEach(p => {
                      const staff = p.staff || '未分配'; // 將空 staff 歸到未分配
-                    // stats[staff] 應該已經存在
+
                     stats[staff].total++;
                     if (p.contactStatus !== "未聯繫") {
                         stats[staff].contacted++;
                     }
                 });
-                 // 只回傳有負責單位數的同仁
+
                  return Object.entries(stats)
                     .filter(([, data]) => data.total > 0)
                     .map(([name, data]) => ({
@@ -1220,28 +683,22 @@
                     }));
             }
 
-
-          // --- 各模組渲染函式 ---
-          // --- JS 修改 5: (替換) 更新渲染邏輯 ---
-          // --- 修改：(表2重構) 重寫 KPI 渲染函數 ---
           function renderTeamSigningProgress(stats) {
               if (!stats || !dom.kpiTableBodyMain) return; // 檢查 DOM 是否存在
 
               const { mainProgress, detailProgress, b2cSummary, b2bSummary } = stats;
 
-              // --- 輔助函式：建立可點擊的 span ---
               const createClickableSpan = (count, item, month, taskKey = null) => {
                   const taskKeyAttr = taskKey ? `data-task-key="${taskKey}"` : '';
                   return `<span class="kpi-progress-link" data-kpi-item="${item}" data-month="${month}" data-count="${count}" ${taskKeyAttr}>${count}</span>`;
               };
 
-              // --- 1. 渲染 <表2-1> (總體目標進度) ---
               const targets = MAIN_KPI_TARGETS;
               const targetTotal = targets.reduce((a, b) => a + b, 0);
               const progressTotal = mainProgress.reduce((a, b) => a + b, 0);
               const overallRate = targetTotal > 0 ? (progressTotal / targetTotal * 100).toFixed(1) : 0;
               const gap = targetTotal - progressTotal;
-              
+
               const monthlyRates = mainProgress.map((p, i) => targets[i] > 0 ? (p / targets[i] * 100).toFixed(0) : 0);
               const gapCells = mainProgress.map((p, i) => Math.max(0, targets[i] - p));
 
@@ -1267,7 +724,6 @@
                       <td class="highlight">${Math.max(0, gap)}</td>
                   </tr>`;
 
-              // --- 2. 渲染 <表2-2> (任務完成明細) ---
               let detailHtml = '';
               DETAIL_TASK_KEYS.forEach(key => {
                   const progress = detailProgress[key];
@@ -1281,7 +737,6 @@
               });
               dom.kpiTableBodyDetail.innerHTML = detailHtml;
 
-              // --- 3. 渲染 <表2-3> (B2C 任務匯總) ---
               const b2cTotal = b2cSummary.reduce((a, b) => a + b, 0);
               dom.kpiTableBodyB2C.innerHTML = `
                   <tr class="total-row">
@@ -1290,7 +745,6 @@
                       <td class="highlight">${createClickableSpan(b2cTotal, 'B2C', 'all')}</td>
                   </tr>`;
 
-              // --- 4. 渲染 <表2-4> (B2B 任務匯總) ---
               const b2bTotal = b2bSummary.reduce((a, b) => a + b, 0);
               dom.kpiTableBodyB2B.innerHTML = `
                   <tr class="total-row">
@@ -1299,15 +753,13 @@
                       <td class="highlight">${createClickableSpan(b2bTotal, 'B2B', 'all')}</td>
                   </tr>`;
           }
-          // --- 結束修改 ---
-          // --- 結束 JS 修改 5 ---
 
           function renderIndividualSigningProgress(stats) {
                  const tableBody = document.getElementById('individual-signing-body');
                  if(!tableBody) return;
-                  // --- 修改：根據 total 數值降冪排序 ---
+
                  stats.sort((a, b) => b.total - a.total);
-                 // --- 結束修改 ---
+
                  tableBody.innerHTML = stats.map((row, index) => {
                      const rate = row.rate.toFixed(1);
                      return `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
@@ -1324,8 +776,6 @@
                  }).join('');
           }
 
-
-          // --- 修改：渲染表4時，只渲染 A, B, C 級 ---
           function renderPublisherTierProgress(progressData) {
               const container = document.getElementById('progress-cards-container');
               const filter = document.getElementById('progress-filter');
@@ -1333,7 +783,6 @@
 
               const staffInFilter = Object.keys(progressData).sort();
 
-              // 只渲染有 A, B, C 級資料的卡片
               container.innerHTML = staffInFilter.map(name => createProgressCardHTML(name, progressData[name])).filter(html => html).join('') || '<p class="text-center text-gray-500 col-span-full">無資料可顯示。</p>';
 
               const currentFilterValue = filter.value;
@@ -1343,14 +792,13 @@
 
               applyHealthCheck();
           }
-          // --- 結束修改 ---
 
           function renderIndividualContactProgress(stats) {
                  const container = document.getElementById('individual-contact-cards-container');
                  if(!container) return;
-                  // --- 修改：根據 total 數值降冪排序 ---
+
                  stats.sort((a, b) => b.total - a.total);
-                 // --- 結束修改 ---
+
                  container.innerHTML = stats.map(row => {
                      const rate = row.rate.toFixed(0);
                      return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
@@ -1366,8 +814,6 @@
                  }).join('');
             }
 
-
-          // --- Helper 函式 ---
           function createPublisherRowHtml(pub, index) {
               if (!pub) {
                   console.error("Attempted to render an invalid publisher at index:", index);
@@ -1411,16 +857,14 @@
               }
           }
 
-
-          // --- 修改：篩選邏輯更新 ---
           function getFilteredAndSortedData() {
               let data = [...state.publishers];
-              // Search Filter
+
               if (state.filters.search) {
                   const searchTerm = state.filters.search.toLowerCase();
                   data = data.filter(p => p.name.toLowerCase().includes(searchTerm) || (p.contractId && p.contractId.toLowerCase().includes(searchTerm)));
               }
-              // Multi-Select Filters
+
               if (state.filters.staff.length > 0) {
                   data = data.filter(p => state.filters.staff.includes(p.staff || '未分配')); // 考慮 '未分配'
               }
@@ -1430,9 +874,7 @@
               if (state.filters.status.length > 0) {
                   data = data.filter(p => state.filters.status.includes(p.contactStatus));
               }
-              // --- 結束修改 ---
 
-              // Sort
               data.sort((a, b) => {
                   let valA = a[state.sort.by] || '';
                   let valB = b[state.sort.by] || '';
@@ -1445,7 +887,6 @@
               });
               return data;
           }
-
 
           function updateCheckboxesAfterRender() {
               if (state.currentRole !== 'admin') return;
@@ -1478,24 +919,23 @@
                if (!dom.colLetterHeader) return;
                const headerCells = document.querySelector('#content-publisher-master thead tr:last-child').cells;
                let letterHtml = '';
-               // G 欄之前的欄位數: Checkbox(1) + #(1) + A(1) + B(1) + C(1) + D(1) + E(1) + F(1) = 8
-               // 但 A-F 才是我們要算的
+
                const fixedColCount = 6; // A-F
                const firstColspan = (state.currentRole === 'admin' ? 1 : 0) + 1; // Checkbox + #
                letterHtml += `<th colspan="${firstColspan}" class="px-3 py-2 border-b border-gray-200"></th>`;
 
                let letterIndex = 0;
-               // A-F (固定欄)
+
                for (let i = 0; i < fixedColCount; i++) {
                    letterHtml += `<th class="px-3 py-2 border-b border-gray-200">${columnIndexToLetter(letterIndex)}</th>`;
                    letterIndex++;
                }
-               // G-Q (動態任務欄)
+
                for (let i = 0; i < taskColumns.length; i++) {
                    letterHtml += `<th class="px-3 py-2 border-b border-gray-200">${columnIndexToLetter(letterIndex)}</th>`;
                    letterIndex++;
                }
-               // 操作欄
+
                letterHtml += `<th class="px-3 py-2 border-b border-gray-200"></th>`;
 
                dom.colLetterHeader.innerHTML = letterHtml;
@@ -1509,20 +949,16 @@
                }
           }
 
-          // --- 事件監聽器設定 ---
           function setupEventListeners() {
-              // Navigation Links
+
               Object.keys(dom.navLinks).forEach(key => {
                   if(dom.navLinks[key]) {
                       dom.navLinks[key].addEventListener('click', (e) => { e.preventDefault(); switchContent(key); });
                   }
               });
 
-              // Search Filter
               dom.searchInput.addEventListener('input', e => { state.filters.search = e.target.value; renderAll(); });
 
-              // --- 修改：複選下拉選單事件 ---
-              // Staff Filter Events
               dom.staffFilterButton.addEventListener('click', (e) => {
                   e.stopPropagation();
                   toggleDropdown('staff');
@@ -1534,7 +970,6 @@
                   }
               });
 
-              // Tier Filter Events
               dom.tierFilterButton.addEventListener('click', (e) => {
                   e.stopPropagation();
                   toggleDropdown('tier');
@@ -1546,7 +981,6 @@
                   }
               });
 
-              // Status Filter Events
               dom.statusFilterButton.addEventListener('click', (e) => {
                   e.stopPropagation();
                   toggleDropdown('status');
@@ -1558,30 +992,23 @@
                   }
               });
 
-              // Click outside to close dropdowns
               document.addEventListener('click', closeAllDropdowns);
-              // --- 結束修改 ---
 
-              // Clear Filters Button
               document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
 
-              // Table Header Sorting
               document.querySelector('#content-publisher-master thead').addEventListener('click', handleSort);
-              // Table Body Actions (Checkbox, Delete)
+
               dom.masterListBody.addEventListener('change', handleRowChange); // Handles checkbox changes
               dom.masterListBody.addEventListener('click', handleRowClick); // Handles delete button clicks
 
-              // Select All Checkbox
               dom.selectAllCheckbox.addEventListener('change', handleSelectAllChange);
-              // Delete Selected Button
+
               dom.deleteSelectedBtn.addEventListener('click', handleDeleteSelectedClick);
 
-              // Import/Export Buttons
               document.getElementById('download-template-btn').addEventListener('click', downloadTemplate);
               document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('file-input').click());
               document.getElementById('file-input').addEventListener('change', handleFileImport);
 
-              // Modals Closing
               document.getElementById('close-publisher-list-btn').addEventListener('click', () => closeModal(dom.publisherListModal, dom.publisherListModalContent));
               dom.publisherListModal.addEventListener('click', e => { if (e.target === dom.publisherListModal) closeModal(dom.publisherListModal, dom.publisherListModalContent); });
               document.getElementById('close-alert-modal-btn').addEventListener('click', () => closeModal(dom.alertModal, dom.alertModalContent));
@@ -1589,24 +1016,16 @@
               dom.cancelConfirmBtn.addEventListener('click', closeConfirmModal);
               dom.confirmModal.addEventListener('click', e => { if (e.target === dom.confirmModal) closeConfirmModal(); });
 
-              // Tier Progress Card Filter/Click
               document.getElementById('progress-filter').addEventListener('change', handleTierProgressFilter);
               document.getElementById('progress-cards-container').addEventListener('click', handleTierCardClick);
 
-              // --- JS 修改 6: (替換) 更新點擊事件處理 ---
-              // KPI Progress Click (Table 2-1 to 2-4)
               document.getElementById('content-team-signing').addEventListener('click', handleKpiProgressClick);
-              // --- 結束 JS 修改 6 ---
 
-              // Export Selected Button
               document.getElementById('export-selected-btn').addEventListener('click', handleExport);
 
-              // Sidebar Toggle
               dom.sidebarToggle.addEventListener('click', toggleSidebar);
           }
 
-
-          // --- 事件處理函式 ---
           function switchContent(targetId) {
               dom.mainTitle.textContent = pageTitles[targetId];
               Object.values(dom.navLinks).forEach(link => {
@@ -1628,21 +1047,19 @@
               }
           }
 
-          // --- 修改：清除篩選邏輯 ---
           function clearFilters() {
               state.filters = { search: '', staff: [], tier: [], status: [] };
               dom.searchInput.value = '';
-              // Uncheck all checkboxes
+
               const filterCheckboxes = document.querySelectorAll('.multi-select-dropdown input[type="checkbox"]');
               filterCheckboxes.forEach(cb => cb.checked = false);
-              // Reset button texts
+
               updateFilterButtonText('staff');
               updateFilterButtonText('tier');
               updateFilterButtonText('status');
               state.selectedPublisherIds.clear(); // 清除表格選取
               renderAll();
           }
-          // --- 結束修改 ---
 
           function handleSort(e) {
               const header = e.target.closest('.sortable-header');
@@ -1683,7 +1100,7 @@
               const row = target.closest('tr');
               if (!row || !row.dataset.id) return;
               const docId = row.dataset.id;
-              
+
               if (target.classList.contains('delete-row-btn')) {
                   const publisherNameCell = row.querySelector('.col-publisher-name');
                   const publisherName = publisherNameCell ? publisherNameCell.textContent : '該出版社';
@@ -1693,14 +1110,10 @@
               }
           }
 
-          // --- JS 修改 7: (替換) 更新點擊事件處理 ---
-          // --- 修改：(表2重構) 重寫 KPI 點擊事件處理 ---
-
-          // 輔助函數：取得 publisher 在 8-12 月的首次完成月份
           function getPublisherFirstCompletionMonth(pub, taskKeys) {
               let earliestMonth = null;
               if (!pub.tasks) return null;
-              
+
               for (const taskKey of taskKeys) {
                   const dateStr = pub.tasks[taskKey];
                   if (dateStr) {
@@ -1718,19 +1131,17 @@
               return earliestMonth;
           }
 
-          // 輔助函數：檢查 publisher 是否在指定月份完成了特定任務
           function checkTaskCompletionInMonth(pub, taskKey, targetMonth) {
               if (!pub.tasks || !pub.tasks[taskKey]) return false;
               const date = new Date(normalizeDate(pub.tasks[taskKey]));
               if (isNaN(date.getTime())) return false;
-              
+
               const month = date.getMonth() + 1;
               if (targetMonth === 'all') {
                   return month >= 8 && month <= 12;
               }
               return month === parseInt(targetMonth, 10);
           }
-
 
           function handleKpiProgressClick(e) {
               const target = e.target.closest('.kpi-progress-link');
@@ -1750,10 +1161,10 @@
 
               switch (kpiItem) {
                   case 'Main':
-                      // 表2-1: 尋找 "不重複" 且 "首次完成" 在該月的 publisher
+
                       const targetMonthInt = (month === 'all') ? null : parseInt(month, 10);
                       const uniquePubsMain = new Map();
-                      
+
                       state.publishers.forEach(pub => {
                           const firstMonth = getPublisherFirstCompletionMonth(pub, taskColumns);
                           if (firstMonth) {
@@ -1767,10 +1178,10 @@
                       break;
 
                   case 'Detail':
-                      // 表2-2: 尋找 "家次"，但清單顯示不重複的 publisher
+
                       if (!taskKey) return;
                       const uniquePubsDetail = new Map();
-                      
+
                       state.publishers.forEach(pub => {
                           if (checkTaskCompletionInMonth(pub, taskKey, month)) {
                               uniquePubsDetail.set(pub.id, pub);
@@ -1783,7 +1194,7 @@
 
                   case 'B2C':
                   case 'B2B':
-                      // 表2-3/2-4: 尋找 "家次" 對應的 "不重複" publisher
+
                       const keysToSearch = (kpiItem === 'B2C') ? B2C_TASK_KEYS : B2B_TASK_KEYS;
                       const uniquePubsSummary = new Map();
 
@@ -1800,24 +1211,19 @@
                       break;
               }
 
-              // --- 更新並顯示 Modal ---
               const listTitleEl = document.getElementById('publisher-list-title');
               if(listTitleEl) listTitleEl.textContent = title;
 
               const listBody = document.getElementById('publisher-list-body');
               if(listBody) {
-                  // 依照要求，顯示出版社清單 (含同仁)
+
                   listBody.innerHTML = filteredPublishers.length > 0
                       ? filteredPublishers.map(p => `<li>${p.name} (${p.contractId || '無編號'}), <strong>${p.staff || '未分配'}</strong></li>`).join('')
                       : '<li>無符合條件的出版社</li>';
               }
               openModal(dom.publisherListModal, dom.publisherListModalContent);
           }
-          // --- 結束修改 ---
-          // --- 結束 JS 修改 7 ---
 
-
-          // --- 刪除與選取相關函數 ---
           function handleSelectAllChange(e) {
               const isChecked = e.target.checked;
               const allVisibleCheckboxes = dom.masterListBody.querySelectorAll('.row-checkbox');
@@ -1892,8 +1298,6 @@
               }
           }
 
-
-          // --- 使用者管理相關函數 ---
           async function fetchUsers() {
               if (state.auth.currentUser) {
                  const currentUserDocRef = doc(state.db, "artifacts", state.appId, "users", state.auth.currentUser.uid);
@@ -1941,7 +1345,6 @@
               }).join('');
           }
 
-          // --- Modal & UI Helpers ---
           function openModal(modal, content) {
             if (modal && content) {
                 modal.classList.remove('hidden');
@@ -1961,7 +1364,7 @@
                 openModal(dom.alertModal, dom.alertModalContent);
             } else { console.error("Alert modal elements not found for showAlert"); }
           }
-          
+
           let confirmCallback = null;
           function openConfirmModal(message, onConfirm) {
               if(dom.confirmModalText && dom.confirmModal && dom.confirmModalContent) {
@@ -1985,7 +1388,6 @@
               closeConfirmModal();
           }
 
-
           function showToast(message, type = "info") {
               const toast = document.getElementById('toast');
               const toastContent = document.getElementById('toast-content');
@@ -2000,10 +1402,8 @@
               setTimeout(() => { toast.classList.remove('show'); }, 3000);
           }
 
-          // --- 修改：複選下拉選單相關函數 ---
           function setupFilters() {
-              // Populate Staff Filter
-              // 從 publishers 動態獲取 staff 列表並排序
+
               const currentStaffList = ['未分配', ...Array.from(new Set(state.publishers.map(p => p.staff).filter(Boolean)))].sort((a,b) => a === '未分配' ? 1 : b === '未分配' ? -1 : a.localeCompare(b, 'zh-Hant'));
               if(dom.staffFilterDropdown) {
                   dom.staffFilterDropdown.innerHTML = currentStaffList.map(s => `
@@ -2013,7 +1413,6 @@
                       </label>`).join('');
               }
 
-              // Populate Tier Filter
               if(dom.tierFilterDropdown) {
                   dom.tierFilterDropdown.innerHTML = tierList.map(t => `
                       <label>
@@ -2022,7 +1421,6 @@
                       </label>`).join('');
               }
 
-              // Populate Status Filter
               if(dom.statusFilterDropdown) {
                   dom.statusFilterDropdown.innerHTML = contactStatusList.map(s => `
                       <label>
@@ -2031,7 +1429,6 @@
                       </label>`).join('');
               }
 
-              // Update button texts initially
               updateFilterButtonText('staff');
               updateFilterButtonText('tier');
               updateFilterButtonText('status');
@@ -2088,7 +1485,7 @@
                   if (countSpan) countSpan.textContent = ''; // Clear count if exists
               } else {
                   placeholder.style.display = 'none';
-                  // Dynamically create count span if it doesn't exist
+
                   let currentCountSpan = button.querySelector('.count');
                   if (!currentCountSpan) {
                       currentCountSpan = document.createElement('span');
@@ -2098,10 +1495,7 @@
                   currentCountSpan.textContent = `${baseText} (${filterArray.length})`;
               }
           }
-          // --- 結束修改 ---
 
-
-          // --- XLSX Import/Export ---
           function downloadTemplate() {
                 const baseHeaders = ["出版社名稱", "合約編號", "負責同仁", "分級", "聯繫狀態", "徵集組指定任務"];
                 const taskHeaders = taskColumns.map(key => {
@@ -2142,10 +1536,9 @@
                               name: publisherName,
                               contractId: record["合約編號"] || null,
                               staff: record["徵集"] || record["負責同仁"] || '未分配',
-                              // --- 修改：匯入時若為 X 級，改存為 null 或 A (根據需求選擇) ---
+
                               tier: tierList.includes(record["分級"]) ? record["分級"] : 'A', // 如果不是 A, B, C，則預設為 A
-                              // tier: tierList.includes(record["分級"]) ? record["分級"] : null, // 或者設為 null
-                              // --- 結束修改 ---
+
                               contactStatus: record["聯繫狀態"] || '未聯繫',
                               missionTags: missionTags,
                               tasks: {}
@@ -2161,15 +1554,15 @@
                           });
 
                           const existingPub = state.publishers.find(p => p.name === publisherName);
-                          
+
                           if (existingPub) {
                               const docRef = doc(state.publishersCollection, existingPub.id);
-                              // 合併 tasks，但確保匯入檔案中的 null/空值 會覆蓋掉舊資料
+
                               const mergedTasks = { ...existingPub.tasks }; // 複製一份舊的
                               taskColumns.forEach(key => {
                                   const headerEl = document.querySelector(`th[data-task-header="${key}"]`);
                                   const headerText = headerEl ? headerEl.textContent : key;
-                                  // 只有當匯入檔案中有定義此欄位時才更新 (允許用空值覆蓋)
+
                                   if (record.hasOwnProperty(headerText)) {
                                      mergedTasks[key] = normalizeDate(record[headerText]);
                                   }
@@ -2205,11 +1598,11 @@
                            return value;
                        }
                    }
-                   // 嘗試更寬鬆的解析 (但不保證準確性，特別是 M-D-Y vs D-M-Y)
+
                    const date = new Date(value);
                     if (!isNaN(date.getTime())) {
                        const year = date.getFullYear();
-                       // 基本的年份檢查，防止 Excel 誤判
+
                        if (year < 1900 || year > 2100) {
                            console.warn(`日期字串 "${value}" 解析出的年份 (${year}) 不合理，已忽略。`);
                            return null;
@@ -2247,7 +1640,6 @@
                return null;
             }
 
-          // --- 表四 & 表五 Card 相關函式 ---
           function handleTierProgressFilter(e) {
               const selectedValue = e.target.value;
               document.querySelectorAll('.progress-card').forEach(card => {
@@ -2282,16 +1674,13 @@
               openModal(dom.publisherListModal, dom.publisherListModalContent);
           }
 
-
-          // --- 修改：createProgressCardHTML 只處理 A, B, C ---
           function createProgressCardHTML(name, data) {
                  let totalRow = { "母體數": 0 };
                  contactStatusList.forEach(s => totalRow[s] = 0);
 
-                 // 只迭代 A, B, C
                  let tableBody = tierList.map(tier => {
                      const tierData = data[tier];
-                     // 如果沒有該級別資料或總數為0，直接返回空字串
+
                      if (!tierData || tierData.total === 0) return '';
 
                      let stageHtml = '';
@@ -2305,13 +1694,10 @@
                      return `<tr class="border-b" data-tier="${tier}"><td class="px-3 py-3 font-medium text-gray-900 text-left">${tier}級</td>${stageHtml}<td class="font-bold bg-gray-50 text-gray-800">${tierData.total}</td></tr>`;
                  }).join('');
 
-                 // 如果 A, B, C 都沒有資料，則不顯示此卡片
                  if (totalRow["母體數"] === 0) return '';
 
                  return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 progress-card" data-name="${name}"><h3 class="text-xl font-bold text-gray-800 mb-4">${name}</h3><div class="overflow-x-auto"><table class="w-full text-xs text-center text-gray-600"><thead class="bg-gray-100 text-gray-700 uppercase"><tr><th class="px-3 py-3 text-left">分級</th>${contactStatusList.map(s => `<th class="px-3 py-3">${s.replace('已聯繫，','')}</th>`).join('')}<th class="px-3 py-3 bg-gray-200 font-bold">母體數</th></tr></thead><tbody>${tableBody}<tr class="bg-gray-100 font-bold"><td class="px-3 py-4 text-gray-900 text-left">總計</td>${contactStatusList.map(s => `<td>${totalRow[s]}</td>`).join('')}<td class="bg-indigo-100 text-indigo-800">${totalRow["母體數"]}</td></tr></tbody></table></div></div>`;
             }
-            // --- 結束修改 ---
-
 
           function applyHealthCheck() {
               document.querySelectorAll('.progress-card').forEach(card => {
@@ -2333,7 +1719,6 @@
               });
           }
 
-          // --- Export Handler ---
            function handleExport() {
                  const selectedCheckboxes = Array.from(document.querySelectorAll('input[name="export-option"]:checked'));
                  if(selectedCheckboxes.length === 0) {
@@ -2349,11 +1734,11 @@
                     [""],
                     ["篩選條件"],
                     ["搜尋關鍵字", state.filters.search || "(無)"],
-                    // --- 修改：匯出時顯示複選內容 ---
+
                     ["負責同仁", state.filters.staff.length > 0 ? state.filters.staff.join(', ') : "(全部)"],
                     ["分級", state.filters.tier.length > 0 ? state.filters.tier.join(', ') : "(全部)"],
                     ["聯繫狀態", state.filters.status.length > 0 ? state.filters.status.join(', ') : "(全部)"],
-                    // --- 結束修改 ---
+
                     [""],
                     ["匯出的報表"],
                     ...selectedCheckboxes.map(cb => [cb.nextElementSibling.textContent.trim()])
@@ -2369,7 +1754,7 @@
                     table4: getPublisherTierDataForExport,
                     table5: getIndividualContactDataForExport,
                 };
-                // --- 修改：sheetNames 物件中的表名 ---
+
                 const sheetNames = {
                     table1: "表1_出版社母體管理",
                     table2: "表2_團隊簽約進度",
@@ -2377,7 +1762,6 @@
                     table4: "表4_分級聯繫進度",
                     table5: "表5_個人聯繫進度",
                 };
-                // --- 結束修改 ---
 
                 selectedCheckboxes.forEach(checkbox => {
                     const optionValue = checkbox.value;
@@ -2410,7 +1794,6 @@
                  showToast("報表匯出成功！", "success");
             }
 
-            // --- Export Data Formatting ---
              function getPublisherMasterDataForExport() {
                  const fixedCols = 6;
                 return getFilteredAndSortedData().map((pub, index) => {
@@ -2458,41 +1841,35 @@
                 });
             }
 
-            // --- (額外修正) 修正匯出邏輯 ---
             function getTeamSigningDataForExport() {
-                // (表2重構) 匯出功能暫時只匯出 <表2-1>
+
                 const header = ["項目", "8月", "9月", "10月", "11月", "12月", "總計"];
                 const tableData = [];
                 const bodyEl = document.getElementById('kpi-table-body-main');
                 if (!bodyEl) return [{ "錯誤": "找不到表2-1的資料" }];
 
-                // 讀取 <表2-1> 的 HTML 內容
                 try {
                     const rows = bodyEl.rows;
                     if (rows.length < 4) return [{ "錯誤": "表2-1 資料不完整" }];
 
-                    // 1. 目標
                     const targetData = { "項目": "目標" };
                     Array.from(rows[0].cells).slice(1).forEach((cell, i) => {
                         targetData[header[i+1]] = cell.textContent;
                     });
                     tableData.push(targetData);
 
-                    // 2. 進度
                     const progressData = { "項目": "進度" };
                     Array.from(rows[1].cells).slice(1).forEach((cell, i) => {
                         progressData[header[i+1]] = cell.textContent;
                     });
                     tableData.push(progressData);
 
-                    // 3. 達成率
                     const rateData = { "項目": "達成率" };
                     Array.from(rows[2].cells).slice(1).forEach((cell, i) => {
                         rateData[header[i+1]] = cell.textContent;
                     });
                     tableData.push(rateData);
-                    
-                    // 4. 缺口
+
                     const gapData = { "項目": "缺口" };
                     Array.from(rows[3].cells).slice(1).forEach((cell, i) => {
                         gapData[header[i+1]] = cell.textContent;
@@ -2503,14 +1880,12 @@
                     console.error("匯出 表2-1 失敗:", e);
                     return [{ "錯誤": "匯出 表2-1 失敗" }];
                 }
-                
+
                 return tableData;
             }
-            // --- 結束 (額外修正) ---
-
 
             function getIndividualSigningDataForExport() {
-                // 先計算，再排序
+
                  const stats = state.analytics.individualSigningStats;
                  stats.sort((a, b) => b.total - a.total);
                 return stats.map(row => ({
@@ -2521,14 +1896,12 @@
                 }));
             }
 
-
-            // --- 修改：移除 X 級的匯出 ---
             function getPublisherTierDataForExport() {
                  const flatData = [];
                  const progressData = state.analytics.tierProgressStats;
-                 // 確保先排序 staff 再處理
+
                  Object.keys(progressData).sort().forEach(staffName => {
-                     // 確保先排序 tier (A, B, C) 再處理
+
                      tierList.forEach(tier => { // tierList 已經移除了 'X'
                          if (progressData[staffName][tier]) {
                              const tierData = progressData[staffName][tier];
@@ -2545,11 +1918,9 @@
                  });
                  return flatData;
             }
-            // --- 結束修改 ---
-
 
             function getIndividualContactDataForExport(){
-                 // 先計算，再排序
+
                  const stats = state.analytics.individualContactStats;
                  stats.sort((a, b) => b.total - a.total);
                 return stats.map(row => ({
@@ -2560,9 +1931,6 @@
                 }));
             }
 
-
-
-           // --- 側邊欄切換函數 ---
            function toggleSidebar() {
                state.isSidebarCollapsed = !state.isSidebarCollapsed;
                applySidebarState();
@@ -2577,29 +1945,167 @@
                    document.body.classList.remove('sidebar-collapsed');
                 }
            }
-      });
-  </script>
-<script id="nx-boot">
-(()=>{
-  const apply = () => {
-    const sidebar = document.getElementById('sidebar');
-    const togglers = Array.from(document.querySelectorAll('#sidebarToggle,.sidebar-toggle,[data-action="toggle-sidebar"]'));
-    if (sidebar) {
-      const KEY = 'sidebarCollapsed';
-      const saved = localStorage.getItem(KEY);
-      if (saved === '1') sidebar.classList.add('collapsed');
-      togglers.forEach(btn => {
-        btn.addEventListener('click', () => {
-          sidebar.classList.toggle('collapsed');
-          localStorage.setItem(KEY, sidebar.classList.contains('collapsed') ? '1' : '0');
-        });
-      });
-    }
-    try {
-      if (window.state) {
-        if (!state.filters || typeof state.filters !== 'object') state.filters = {};
-        for (const k of ['staff','tier','status']) {
-          if (!Array.isArray(state.filters[k])) state.filters[k] = [];
-        }
+      });</script><script id="nx-boot">(()=>{const apply = () => {const sidebar = document.getElementById('sidebar');const togglers = Array.from(document.querySelectorAll('#sidebarToggle,.sidebar-toggle,[data-action="toggle-sidebar"]'));if (sidebar) {const KEY = 'sidebarCollapsed';const saved = localStorage.getItem(KEY);if (saved === '1') sidebar.classList.add('collapsed');togglers.forEach(btn => {btn.addEventListener('click', () => {sidebar.classList.toggle('collapsed');localStorage.setItem(KEY, sidebar.classList.contains('collapsed') ? '1' : '0');});});}try {if (window.state) {if (!state.filters || typeof state.filters !== 'object') state.filters = {};for (const k of ['staff','tier','status']) {if (!Array.isArray(state.filters[k])) state.filters[k] = [];}}} catch (
+<!--__PUBLIC_AUTO_LOGIN_INJECTED__--><script>(function(){try{window.__PUBLIC_MODE__=!0;document.addEventListener('DOMContentLoaded',function(){try{if(window.firebase&&firebase.apps&&firebase.apps.length>0&&firebase.auth){var a=firebase.auth();if(a&&a.signInAnonymously)a.signInAnonymously().catch(function(){})}}catch(e){};['#login','.login','[data-auth="login"]','.auth','[data-role="signin"]'].forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.display='none';el.setAttribute('data-hidden-by','public-mode')})}catch(e){}});['#app','#root','#main','main','.app','.dashboard'].forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.removeProperty('display');el.style.visibility='visible'})}catch(e){}});})}catch(e){}})();</script><!--__TABLE_3_1_INJECTED__--><!--__TABLE_3_1_INJECTED__--><script>(function(){'use strict';
+function t(n){return (n&&n.textContent||'').trim();}
+function parseDate(s){
+  if(!s) return null; s=String(s).trim();
+  var m = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m) return {y:+m[1],m:+m[2],d:+m[3]};
+  m = s.match(/\b(\d{1,2})[\/](\d{1,2})\b/);
+  if(m) return {y:NaN,m:+m[1],d:+m[2]};
+  m = s.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  if(m) return {y:NaN,m:+m[1],d:+m[2]};
+  return null;
+}
+function badge(rate){ if(rate>=1) return '<span class="inline-block px-2 py-0.5 rounded-xl bg-green-100 text-green-700">達標</span>';
+  if(rate>=0.8) return '<span class="inline-block px-2 py-0.5 rounded-xl bg-yellow-100 text-yellow-700">接近</span>';
+  return '<span class="inline-block px-2 py-0.5 rounded-xl bg-red-100 text-red-700">待加油</span>'; }
+
+function computeFromMaster(){
+  var body = document.getElementById('master-list-body'); if(!body) return null;
+  var table = body.closest('table'); if(!table) return null;
+  var ths = Array.from(table.querySelectorAll('thead th'));
+  var staffIdx = -1, taskIdx = [];
+  for(var i=0;i<ths.length;i++){
+    var th=ths[i];
+    var ds=th.getAttribute('data-sort')||'';
+    var dh=th.getAttribute('data-task-header')||'';
+    var tx=t(th);
+    if(staffIdx===-1 && (ds.toLowerCase()==='staff' || /(經辦|承辦|同仁|Owner|Handler)/i.test(tx))) staffIdx=i;
+    if(dh){ taskIdx.push(i); continue; }
+    if(/task_|(B2C|B2B|新書|電子書|收件|簽回|回覆|合約|授權|確認|完成)/i.test(dh+tx)) taskIdx.push(i);
+  }
+  if(staffIdx===-1 || taskIdx.length===0) return null;
+
+  var perStaff = Object.create(null);
+  var seenPerStaffPerPub = Object.create(null);
+  var rows = Array.from(body.querySelectorAll('tr'));
+  rows.forEach(function(tr){
+    var pubKey = tr.getAttribute('data-id') || t(tr.querySelector('[data-col="publisher"],.publisher,[data-publisher]')) || t(tr.querySelector('td:first-child')) || String(Math.random());
+    var cells = tr.querySelectorAll('td,th');
+    var staff = (staffIdx<cells.length)? t(cells[staffIdx]) : (tr.getAttribute('data-staff')||tr.getAttribute('data-owner')||tr.getAttribute('data-handler')||'');
+    if(!staff) return;
+    var earliest = null;
+    for(var k=0;k<taskIdx.length;k++){
+      var idx = taskIdx[k];
+      if(idx>=cells.length) continue;
+      var d = parseDate(t(cells[idx]));
+      if(!d || !d.m) continue;
+      if(d.m<1 || d.m>12) continue;
+      if(earliest==null) earliest=d;
+      else{
+        var a = (isNaN(earliest.y)?0:earliest.y)*10000 + (earliest.m||0)*100 + (earliest.d||0);
+        var b = (isNaN(d.y)?0:d.y)*10000 + (d.m||0)*100 + (d.d||0);
+        if(b<a) earliest=d;
       }
-    } catch (
+    }
+    if(!earliest) return;
+    if(earliest.m>=8 && earliest.m<=12){
+      var key = staff + '||' + pubKey;
+      if(!seenPerStaffPerPub[key]){
+        seenPerStaffPerPub[key]=1;
+        perStaff[staff]=(perStaff[staff]||0)+1;
+      }
+    }
+  });
+  var items = Object.keys(perStaff).map(function(name){ return {name:name,total:perStaff[name]}; });
+  return items;
+}
+
+function render(items){
+  var tbody=document.getElementById('kpi-table-body-3-1'); if(!tbody) return;
+  var LOW=18;
+  items = items || [];
+  items.sort(function(a,b){ return (b.total||0)-(a.total||0) || a.name.localeCompare(b.name,'zh-Hant'); });
+  tbody.innerHTML = items.map(function(r){
+    var rate = (LOW>0)? (r.total/LOW):0;
+    var pct = (Math.round(rate*1000)/10).toFixed(1)+'%';
+    return '<tr>'+
+      '<td class="px-3 py-2 border">'+(r.name||'')+'</td>'+
+      '<td class="px-3 py-2 border text-right">'+LOW+'</td>'+
+      '<td class="px-3 py-2 border text-right">'+(r.total||0)+'</td>'+
+      '<td class="px-3 py-2 border text-right">'+pct+'</td>'+
+    '</tr>';
+  }).join('');
+}
+function init(){
+  // Prefer Table 3 (individual) for accurate per-person totals
+  if (typeof harvestFromIndividualTable === 'function') {
+    var d1 = harvestFromIndividualTable();
+    if (d1 && d1.length) { renderTable3_1 ? renderTable3_1(d1) : render(d1); return; }
+  }
+  // Fallback to master list rollup if individual table not available
+  if (typeof computeFromMaster === 'function') {
+    var d2 = computeFromMaster();
+    if (d2 && d2.length) { renderTable3_1 ? renderTable3_1(d2) : render(d2); return; }
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();</script>
+<script>
+(function(){
+  function getTable3Data(){
+    var tbody = document.getElementById('individual-signing-body');
+    if(!tbody) return null;
+    var table = tbody.closest('table'); if(!table) return null;
+    var thead = table.querySelector('thead'); if(!thead) return null;
+    var ths = Array.from(thead.querySelectorAll('th'));
+    var nameIdx = -1, signedIdx = -1;
+    ths.forEach(function(th, i){
+      var txt = (th.textContent||'').trim();
+      if (/(負責人|同仁|經辦|承辦|Owner|Handler)/.test(txt)) nameIdx = i;
+      if (/(已簽約|簽約家數|合計)/.test(txt)) signedIdx = i;
+    });
+    if(nameIdx < 0 || signedIdx < 0) return null;
+    var rows = [];
+    tbody.querySelectorAll('tr').forEach(function(tr){
+      var cells = tr.querySelectorAll('td,th');
+      if(!cells || cells.length===0) return;
+      var name = cells[nameIdx] ? (cells[nameIdx].textContent||'').trim() : '';
+      if(!name) return;
+      var raw = cells[signedIdx] ? (cells[signedIdx].textContent||'').trim() : '0';
+      var m = raw.replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+      var signed = m ? parseInt(m[0],10) : 0;
+      rows.push({name:name, total:signed});
+    });
+    return rows;
+  }
+  function render3_1(rows){
+    var LOW = 18;
+    var tbody = document.getElementById('kpi-table-body-3-1');
+    if(!tbody || !rows) return;
+    // filter out empty names
+    rows = rows.filter(function(r){ return r && r.name; });
+    // de-duplicate same name by summing totals
+    var map = {};
+    rows.forEach(function(r){ map[r.name]=(map[r.name]||0)+(isFinite(r.total)?r.total:0); });
+    var list = Object.keys(map).map(function(n){ return {name:n, total:map[n]}; });
+    list.sort(function(a,b){ return (b.total||0)-(a.total||0) || a.name.localeCompare(b.name,'zh-Hant'); });
+    tbody.innerHTML = list.map(function(r){
+      var pct = (Math.round((r.total/LOW)*1000)/10).toFixed(1) + '%';
+      return '<tr>' +
+        '<td class="px-3 py-2 border">'+r.name+'</td>' +
+        '<td class="px-3 py-2 border text-right">'+LOW+'</td>' +
+        '<td class="px-3 py-2 border text-right">'+(r.total||0)+'</td>' +
+        '<td class="px-3 py-2 border text-right">'+pct+'</td>' +
+      '</tr>';
+    }).join('');
+  }
+  function recalc(){
+    var rows = getTable3Data();
+    if(rows && rows.length){ render3_1(rows); }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', recalc);
+  } else {
+    recalc();
+  }
+  // React to dynamic updates in 表3
+  var tgt = document.getElementById('individual-signing-body');
+  if(tgt && 'MutationObserver' in window){
+    var mo = new MutationObserver(function(){ recalc(); });
+    mo.observe(tgt, {childList:true, subtree:true, characterData:true});
+  }
+})();
+</script>
