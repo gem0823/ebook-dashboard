@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>徵集目標統計報告 (含匯出功能)</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Chart.js (圖表庫) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 載入 SheetJS (xlsx.js) 用於讀取 Excel 檔案 -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- 使用 Inter 字體 (外觀更專業) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 優先使用 Noto Sans TC 處理中文 */
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        /* 隱藏預設的檔案上傳 input */
+        #csv-importer {
+            display: none;
+        }
+
+        /* Modal 彈出視窗樣式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px; /* Modal 最大寬度 */
+            max-height: 80vh; /* Modal 最大高度 */
+            overflow-y: auto; /* 內容過多時滾動 */
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+        .modal-close-btn {
+            background-color: #e5e7eb;
+            color: #4b5563;
+            border: none;
+            border-radius: 99px;
+            width: 32px;
+            height: 32px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .modal-close-btn:hover {
+            background-color: #d1d5db;
+        }
+
+        /* 可點擊的表格儲存格樣式 */
+        .clickable-cell {
+            color: #2563eb; /* 藍色 */
+            text-decoration: underline;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .clickable-cell:hover {
+            color: #1d4ed8;
+        }
+
+        /* 表格樣式 (for 表2 & 表4) */
+        .team-table {
+            min-width: 100%;
+            border-collapse: collapse; /* 讓 border 合併 */
+        }
+        .team-table th, .team-table td {
+            border: 1px solid #e5e7eb; /* 淺灰色邊框 */
+            padding: 10px 12px;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .team-table th {
+            background-color: #f9fafb; /* 表頭背景色 */
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+        }
+        .team-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+        }
+        .team-table th:first-child {
+            text-align: left;
+        }
+
+        .team-table td {
+            color: #1f2937;
+        }
+        .team-table .highlight-col {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .team-table .highlight-row {
+            background-color: #fefce8; /* 達成率黃色背景 */
+            font-weight: 500;
+        }
+        .team-table .total-row {
+            background-color: #f0f9ff; /* 總計藍色背景 */
+            font-weight: bold;
+        }
+        /* [NEW] B2C/B2B/電子書合作 背景色 */
+        .team-table .b2c-row { background-color: #eff6ff; } /* blue-50 */
+        .team-table .b2b-row { background-color: #f0fdf4; } /* green-50 */
+        .team-table .ebook-coop-row { background-color: #fef9c3; } /* yellow-100 */
+
+        /* <表4> 狀態顏色 */
+        .team-table .status-signed { background-color: #dcfce7; color: #166534; } /* 綠 */
+        .team-table .status-negotiating { background-color: #fefce8; color: #854d0e; } /* 黃 */
+        .team-table .status-other { background-color: #e0f2fe; color: #075985; } /* 藍 */
+
+        /* <表4> 百分比文字 */
+        .percentage-text {
+            font-size: 0.8rem;
+            color: #6b7280;
+            display: block; /* 換行顯示 */
+            margin-top: 2px;
+        }
+
+        /* <表4-3> 同仁進度卡片樣式 */
+        .progress-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .progress-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            padding: 1.25rem 1.5rem;
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .card-rating-section {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .card-rating-section:last-child {
+            border-bottom: none;
+        }
+        .card-rating-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+        .card-rating-title.total-rating {
+            color: #1d4ed8;
+            background-color: #eef2ff;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .card-table {
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .card-table th, .card-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .card-table th {
+            color: #4b5563;
+            font-weight: 600;
+        }
+        .card-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .card-table th:not(:first-child), .card-table td:not(:first-child) {
+            text-align: right;
+        }
+        .card-table td:nth-child(2) {
+            font-weight: 600;
+        }
+        .card-table td:nth-child(3) {
+            color: #374151;
+            font-size: 0.8rem;
+        }
+        /* <表4-3> 卡片狀態顏色 */
+        .card-table .status-signed { color: #16a34a; }
+        .card-table .status-negotiating { color: #ca8a04; }
+        .card-table .status-other { color: #0284c7; }
+
+        /* 匯出按鈕樣式 */
+        .export-btn {
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background-color: #ffffff;
+            color: #374151;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            /* 確保按鈕在 flex 容器中高度一致 */
+            height: 46px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .export-btn:hover {
+            background-color: #f9fafb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .export-btn.excel {
+            color: #15803d;
+            border-color: #bbf7d0;
+            background-color: #f0fdf4;
+        }
+        .export-btn.excel:hover {
+            background-color: #dcfce7;
+        }
+
+        /* 範例下載按鈕樣式 */
+        .export-btn.demo-download-btn {
+            color: #991b1b; /* red-800 */
+            border-color: #fecaca; /* red-200 */
+            background-color: #fee2e2; /* red-100 */
+        }
+        .export-btn.demo-download-btn:hover {
+            background-color: #fecaca; /* red-200 */
+        }
+
+        /* 訊息提示框 */
+        .message-box {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            margin-top: 1rem;
+            transition: opacity 0.3s;
+        }
+        .message-box.hidden {
+            display: none;
+        }
+        .message-box.msg-info {
+            background-color: #e0f2fe; color: #0c4a6e;
+        }
+        .message-box.msg-success {
+            background-color: #dcfce7; color: #166534;
+        }
+        .message-box.msg-error {
+            background-color: #fee2e2; color: #991b1b;
+        }
+
+        /* 圖一圓環圖容器 - 改為 grid */
+        #rateChartContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            align-items: start;
+            width: 100%;
+        }
+        /* 每位同仁的圓環圖組 */
+        /* [MODIFIED] 加上黑色邊框 */
+        .staff-rate-charts-wrapper {
+             padding: 1rem; /* 增加內部間距 */
+             border: 2px solid #000000; /* 黑色邊框 */
+             border-radius: 8px; /* 圓角 */
+             margin-bottom: 1rem; /* 組之間的下間距 */
+        }
+        /* [REMOVED] 移除 first-child 的特殊樣式，讓所有框線一致 */
+        /* .staff-rate-charts-wrapper:first-child { ... } */
+        .staff-rate-charts {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        /* 圓環圖包裝 */
+        .rate-doughnut-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+        }
+        .rate-doughnut-canvas {
+            max-width: 130px;
+            max-height: 130px;
+        }
+        .rate-doughnut-label {
+            margin-top: 0.75rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .rate-doughnut-sublabel {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        /* 同仁姓名標題 */
+        .staff-chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        /* [NEW] <表4-0> 進度條樣式 */
+        .progress-bar-container {
+            margin-bottom: 1rem;
+        }
+        .progress-bar-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.25rem;
+        }
+        .progress-bar-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .progress-bar-percentage {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #3b82f6; /* blue-500 */
+        }
+        .progress-bar-bg {
+            height: 12px;
+            background-color: #e5e7eb; /* gray-200 */
+            border-radius: 99px;
+            overflow: hidden;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3b82f6; /* blue-500 */
+            border-radius: 99px;
+            transition: width 0.3s ease-out;
+        }
+        .progress-bar-counts {
+            font-size: 0.75rem;
+            color: #6b7280; /* gray-500 */
+            text-align: right;
+            margin-top: 0.1rem;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- 模組選單區塊 -->
+    <nav class="w-full bg-white shadow-sm">
+        <div class="container mx-auto max-w-6xl px-4 md:px-8">
+            <ul class="flex space-x-8 border-b border-gray-200">
+                <!-- [MODIFIED] <表1> 匯入資料 (預設啟用) -->
+                <li id="nav-tab1" class="-mb-px">
+                    <a href="#" onclick="showTab('tab1'); return false;" class="inline-block py-4 px-1 border-b-2 border-blue-600 text-blue-600 font-bold" aria-current="page">
+                        &lt;表1&gt; 匯入資料
+                    </a>
+                </li>
+                <!-- [MODIFIED] <表2> 頁籤標題 -->
+                <li id="nav-tab2" class="-mb-px">
+                    <a href="#" onclick="showTab('tab2'); return false;" class="inline-block py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium">
+                        &lt;表2&gt; 徵集組_團體簽約進度 <!-- Modified -->
+                    </a>
+                </li>
+                <!-- [MODIFIED] <表3> 頁籤標題 -->
+                <li id="nav-tab3" class="-mb-px">
+                    <a href="#" onclick="showTab('tab3'); return false;" class="inline-block py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium">
+                        &lt;表3&gt; 徵集組_個人簽約進度 <!-- Modified -->
+                    </a>
+                </li>
+                <!-- [MODIFIED] <表4> 頁籤標題 -->
+                <li id="nav-tab4" class="-mb-px">
+                    <a href="#" onclick="showTab('tab4'); return false;" class="inline-block py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium">
+                        &lt;表4&gt;徵集組_聯繫出版社進度 <!-- Modified -->
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 將 container 移到此處，並補上 p-4 md:p-8 -->
+    <div class="container mx-auto max-w-6xl p-4 md:p-8">
+
+        <!-- [MODIFIED] <表1> 內容區塊 (預設顯示) -->
+        <div id="tab1-content" class="bg-white rounded-xl shadow-2xl p-6 md:p-10 tab-active">
+            <!-- 標題區 -->
+            <div class="border-b border-gray-200 pb-4 mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">&lt;表1&gt; 匯入資料</h1>
+                <p class="text-lg text-gray-600 mt-2">請由此處匯入最新的 Excel (xlsx) 或 CSV 檔案。匯入後，所有模組的數據將會更新。</p>
+            </div>
+
+            <!-- 匯入區塊 -->
+            <div class="max-w-md">
+                <!-- [MODIFIED] 加入 flex 容器 -->
+                <div class="flex space-x-3">
+                    <label for="csv-importer" class="cursor-pointer bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-0.5 inline-flex items-center">
+                        選擇 XLSX/CSV 檔案
+                    </label>
+                    <!-- [NEW] 範例下載按鈕 -->
+                    <button onclick="downloadDemoTemplate()" class="export-btn demo-download-btn">
+                        下載匯入格式範例
+                    </button>
+                </div>
+                <!-- 實際的 input (隱藏) -->
+                <input type="file" id="csv-importer" accept=".csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+
+                <!-- 匯入狀態訊息 -->
+                <div id="import-status" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <!-- [MODIFIED] 恢復預設文字 -->
+                    <p class="text-gray-500">尚未匯入檔案。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- <表2> 內容區塊 (預設隱藏) -->
+        <div id="tab2-content" class="hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 md:p-10">
+                <!-- 標題區 -->
+                <div class="border-b border-gray-200 pb-4 mb-8">
+                    <!-- [MODIFIED] 更新標題文字 -->
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900">&lt;表2&gt; 徵集組_團體簽約進度</h1> <!-- Modified -->
+                    <!-- [REMOVED] 移除 "2025年8~12月 中文電子書徵集團體總目標" -->
+                    <!-- <p class="text-lg text-gray-600 mt-2">2025年8~12月 中文電子書徵集團體總目標</p> -->
+                </div>
+
+                <!-- [NEW] 匯出按鈕區 -->
+                <div class="export-controls mb-6 space-x-3">
+                    <button onclick="exportExcel('tab2')" class="export-btn excel">匯出 Excel (XLSX)</button>
+                    <div class="message-box hidden"></div>
+                </div>
+
+                <!-- 表2-1 -->
+                <div class="mb-12">
+                     <!-- [MODIFIED] 更新標題文字 -->
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">&lt;表2-1&gt; 每月完成簽約家數_統計表 (單位:家)</h2> <!-- Modified -->
+
+                    <!-- [MODIFIED] 移動團體目標備註至此，並調整文字 -->
+                    <p class="text-sm text-red-600 mb-2 -mt-2">
+                        ※備註：2025年8~12月徵集組簽約團體目標為58家。<br> <!-- Moved & Modified -->
+                        ※備註：統計每月，首次完成任一任務的「不重複出版社」家數。 <!-- Modified -->
+                    </p>
+
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <table class="team-table">
+                            <!-- [MODIFIED] 更新表頭文字 -->
+                            <thead id="team-goal-table-head">
+                                <!-- JS 會更新此處 -->
+                            </thead>
+                            <tbody id="team-goal-table-body">
+                                <!-- JS 渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 表2-2 -->
+                <div class="mb-12">
+                     <!-- [MODIFIED] 更新標題文字 -->
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">&lt;表2-2&gt; 每月簽回權利_統計表 (單位:家次)</h2> <!-- Modified -->
+
+                    <!-- [MODIFIED] 調整備註順序與文字, 調整間距 -->
+                    <p class="text-sm text-red-600 mb-1"> <!-- Modified: mb-1 -->
+                        ※備註：統計每月，簽回下表權利的「出版社家次」。(例：８月簽回某出版社的下表2項權利，則重複計算為2家次) <!-- Moved & Modified -->
+                    </p>
+                    <p class="text-sm text-red-600 mb-1"> <!-- Modified: mb-1 -->
+                         ※備註：【名詞解釋】&lt;取得：電子書合作&gt;：原本完全未合作，屬於全新簽約。
+                    </p>
+                    <p class="text-sm text-gray-600 mt-2 mb-2"> <!-- Modified: mt-2 mb-2 -->
+                        <span class="inline-block w-3 h-3 rounded-full bg-blue-100 mr-1 align-middle"></span> B2C 權利擴增包含：取得:B2C銷售權利、取得[灰熊]、取得[書紐]金石堂、取得[書紐]三民、取得B2C經銷第三方平台權利、取得電子教科書TRMS。<br> <!-- Modified -->
+                        <span class="inline-block w-3 h-3 rounded-full bg-green-100 mr-1 align-middle"></span> B2B 權利擴增包含：取得:B2B銷售權利、取得B2B_聯盟、取得B2B_公圖、取得B2B_CN。 <!-- Modified -->
+                    </p>
+
+
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <table class="team-table">
+                            <thead>
+                                <tr>
+                                     <!-- [MODIFIED] 更新表頭文字 -->
+                                    <th class="!text-left">簽回權利項目</th> <!-- Modified -->
+                                    <th>8月</th>
+                                    <th>9月</th>
+                                    <th>10月</th>
+                                    <th>11月</th>
+                                    <th>12月</th>
+                                    <th>小計</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-task-table">
+                                <!-- JS 渲染 (會包含電子書合作行) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 表2-3 B2C -->
+                <div class="mb-12">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">&lt;表2-3&gt; B2C 每月簽回情況</h2>
+                     <!-- [MODIFIED] 更新備註文字 -->
+                    <p class="text-sm text-red-600 mb-2 -mt-2">
+                        ※備註：統計每月，簽回B2C 相關權利擴增的「出版社家次」總計。 <!-- Modified -->
+                    </p>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <table class="team-table">
+                            <thead>
+                                <tr>
+                                     <!-- [MODIFIED] 更新表頭文字 -->
+                                    <th>簽回權利項目</th> <!-- Modified -->
+                                    <th>8月</th>
+                                    <th>9月</th>
+                                    <th>10月</th>
+                                    <th>11月</th>
+                                    <th>12月</th>
+                                    <th>小計</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-b2c-table">
+                                <!-- JS 渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 表2-4 B2B -->
+                <div class="mb-12">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">&lt;表2-4&gt; B2B 每月簽回情況</h2>
+                     <!-- [MODIFIED] 更新備註文字 -->
+                    <p class="text-sm text-red-600 mb-2 -mt-2">
+                        ※備註：統計每月，簽回B2B 相關權利擴增的「出版社家次」總計。 <!-- Modified -->
+                    </p>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <table class="team-table">
+                            <thead>
+                                <tr>
+                                     <!-- [MODIFIED] 更新表頭文字 -->
+                                    <th>簽回權利項目</th> <!-- Modified -->
+                                    <th>8月</th>
+                                    <th>9月</th>
+                                    <th>10月</th>
+                                    <th>11月</th>
+                                    <th>12月</th>
+                                    <th>小計</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-b2b-table">
+                                <!-- JS 渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- [MODIFIED] <表3> 內容區塊 (預設隱藏) -->
+        <div id="tab3-content" class="hidden">
+            <!-- 主面板 -->
+            <div class="bg-white rounded-xl shadow-2xl p-6 md:p-10">
+
+                <!-- 標題區 -->
+                <div class="border-b border-gray-200 pb-4 mb-8">
+                    <!-- [MODIFIED] 修改標題和描述 -->
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900">&lt;表3&gt; 徵集組_個人簽約進度</h1> <!-- Modified -->
+                    <p class="text-lg text-gray-600 mt-2">此區目標為徵集同仁自行設定至2025/12/31止的簽約目標家數。此家數不得小於低標18家。</p> <!-- Modified -->
+                </div>
+
+                <!-- [NEW] 匯出按鈕區 -->
+                <div class="export-controls mb-6 space-x-3">
+                    <button onclick="exportExcel('tab3')" class="export-btn excel">匯出 Excel (XLSX)</button>
+                    <div class="message-box hidden"></div>
+                </div>
+
+                <!-- 圖表區 -->
+                <div class="mb-12">
+                    <!-- [REMOVED] 圖一 區塊 -->
+
+                    <!-- [MODIFIED] 圖二改名為圖一 -->
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">
+                            圖一：簽約達成率 (%) <!-- [MODIFIED] 文字調整 -->
+                        </h2>
+                        <!-- 容器 ID 不變, 內部 JS 會處理 -->
+                        <div id="rateChartContainer">
+                            <!-- JS 會動態在此加入圓環圖組 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 錯誤訊息顯示區 -->
+                <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                    <strong class="font-bold">匯入錯誤：</strong>
+                    <span class="block sm:inline" id="error-text"></span>
+                </div>
+
+                <!-- 詳細數據表格 -->
+                <div>
+                    <!-- [MODIFIED] 更新標題文字 -->
+                    <div class="flex justify-between items-center mb-5">
+                        <h2 class="text-2xl font-semibold text-gray-800">&lt;表3-1&gt;簽約目標&amp;已簽約_數據表(單位:家)</h2>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <!-- [MODIFIED] 更新表頭文字 -->
+                        <table class="min-w-full divide-y divide-gray-200 bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">負責徵集</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">目標-A</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">目標-B</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">目標-C</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">自設目標</th> <!-- Modified -->
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-purple-700 uppercase tracking-wider">低標</th> <!-- Modified -->
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-green-700 uppercase tracking-wider">已簽約</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-green-700 uppercase tracking-wider">已簽-A</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-green-700 uppercase tracking-wider">已簽-B</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-green-700 uppercase tracking-wider">已簽-C</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">自設達成率 (%)</th> <!-- No Change -->
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-purple-700 uppercase tracking-wider">低標達成率 (%)</th> <!-- Modified -->
+                                </tr>
+                            </thead>
+                            <!-- 數據表格內容將由 JS 動態填入 -->
+                            <tbody id="data-table-body" class="divide-y divide-gray-200">
+                                <!-- 載入中... -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- [NEW] <表4> 內容區塊 (預設隱藏) -->
+        <div id="tab4-content" class="hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 md:p-10">
+                <!-- 標題區 -->
+                <div class="border-b border-gray-200 pb-4 mb-8">
+                     <!-- [MODIFIED] 修改標題 -->
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900">&lt;表4&gt;徵集組_聯繫出版社進度</h1> <!-- Modified -->
+                    <p class="text-lg text-gray-600 mt-2">顯示所有同仁及各分級的聯繫狀態分佈。</p>
+                </div>
+
+                <!-- [NEW] 匯出按鈕區 -->
+                <div class="export-controls mb-6 space-x-3">
+                    <button onclick="exportExcel('tab4')" class="export-btn excel">匯出 Excel (XLSX)</button>
+                    <div class="message-box hidden"></div>
+                </div>
+
+                <!-- [MODIFIED] <表4-0> -> <表4-1> -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-5">&lt;表4-1&gt; 同仁聯繫進度 (%)</h2>
+                    <!-- [NEW] 表4-1 備註 -->
+                    <p class="text-sm text-red-600 mb-4 -mt-4">
+                        ※備註：聯繫進度 (%) = (已聯繫家數 / 總家數) x 100%。其中「已聯繫家數」指排除「未聯繫」狀態的所有出版社家數。
+                    </p>
+                    <div id="contact-rate-progress-bars" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <!-- JS 渲染 -->
+                        <p class="text-center p-4 text-gray-500 col-span-1 md:col-span-2">請先至 &lt;表1&gt; 匯入資料。</p>
+                    </div>
+                </div>
+
+                <!-- 備註區 -->
+                <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">聯繫階段定義備註</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-2">
+                        <li><strong class="text-gray-800">未聯繫：</strong>指2025/8/4後，仍尚未重啟聯繫者(過往聯繫不算)</li>
+                        <li><strong class="text-gray-800">聯繫中：</strong>已寄信或致電，但未明確可否合作</li>
+                        <li><strong class="text-gray-800">已聯繫，有意願洽談：</strong>有意合作</li>
+                        <li><strong class="text-gray-800">已聯繫，無意願洽談：</strong>明確婉拒合作，需進一步了解原因</li>
+                        <li><strong class="text-gray-800">審約中：</strong>雙方有討論條文</li>
+                        <li><strong class="text-gray-800">用印中：</strong>任一方開始用印</li>
+                        <li><strong class="text-gray-800">已簽回，已移交合約：</strong>已用印完畢，且負責簽約的徵集同仁已移交合約正本給公司。</li>
+                    </ul>
+                </div>
+
+                <!-- [MODIFIED] <表4-1> -> <表4-2> -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-5">&lt;表4-2&gt; 依同仁聯繫進度</h2>
+                    <div id="staff-contact-progress-table-container" class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <!-- JS 渲染 -->
+                    </div>
+                </div>
+
+                <!-- [MODIFIED] <表4-2> -> <表4-3> -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-5">&lt;表4-3&gt; 依分級聯繫進度 (含佔比)</h2>
+                    <div id="rating-contact-progress-table-container" class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                        <!-- JS 渲染 -->
+                    </div>
+                </div>
+
+                <!-- [MODIFIED] <表4-3> -> <表4-4> -->
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-5">&lt;表4-4&gt; 同仁進度卡片</h2>
+                    <div id="staff-progress-cards-container" class="grid grid-cols-1 lg:grid-cols-1 gap-6"> <!-- 改為單欄 -->
+                        <!-- JS 渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- 結束 container div -->
+
+    <!-- Modal 彈出視窗 HTML -->
+    <div id="publisher-modal" class="modal-overlay">
+        <div class="modal-content">
+            <!-- Modal 標頭 -->
+            <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-4">
+                <h2 id="modal-title" class="text-xl font-bold text-gray-800">出版社詳情</h2>
+                <button id="modal-close" class="modal-close-btn">&times;</button>
+            </div>
+            <!-- Modal 內容 (將由 JS 填入表格) -->
+            <div id="modal-body" class="overflow-x-auto">
+                <!-- 列表將插入此處 -->
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- 1. 核心數據與全域變數 ---
+        let staffData = [
+            { name: '李芷瑄', a: 7, b: 6, c: 6, total: 19, actual: 0, actual_A: 0, actual_B: 0, actual_C: 0, signedList: [] },
+            { name: '李虹儀', a: 5, b: 74, c: 3, total: 82, actual: 0, actual_A: 0, actual_B: 0, actual_C: 0, signedList: [] },
+            { name: '陳玫君', a: 15, b: 6, c: 6, total: 27, actual: 0, actual_A: 0, actual_B: 0, actual_C: 0, signedList: [] },
+            { name: '陳俐吟', a: 6, b: 9, c: 6, total: 21, actual: 0, actual_A: 0, actual_B: 0, actual_C: 0, signedList: [] }
+        ];
+
+        // [MODIFIED] 修改變數名稱 "底標" 為 "低標"
+        const lowTargetValue = 18; // 簽約低標
+
+        // [REMOVED] 圖一相關變數
+        // let totalChartInstance = null;
+
+        // 圖二改為圓環圖實例的物件, key 為 staff name
+        let rateChartInstances = {};
+
+        let allImportedRows = [];
+
+        // <表2> 資料結構
+        let globalTeamData = {
+            teamGoalData: {},
+            teamTaskData: {},
+            b2cData: {},
+            b2bData: {}
+        };
+
+        // <表2> 欄位定義
+        const DATE_COL_START = 6;
+        const DATE_COL_END = 16;
+        // [MODIFIED] 新增電子書合作 G欄 (index 6)
+        const taskMapping = {
+            "取得:電子書合作": 6, // G欄
+            "取得:B2C銷售權利": 7, // H欄 (NEW)
+            "取得：[灰熊]": 8, // I欄
+            "取得： 電子教科書TRMS": 9, // J欄
+            "取得：[書紐]金石堂": 10, // K欄
+            "取得：[書紐]三民": 11, // L欄
+            "取得：B2C經銷第三方平台權利": 12, // M欄
+            "取得:B2B銷售權利": 13, // N欄 (NEW)
+            "取得:B2B_聯盟": 14, // O欄
+            "取得:B2B_公圖": 15, // P欄
+            "取得:B2B_CN": 16 // Q欄
+        };
+        // [MODIFIED] taskItems 現在會包含 "取得:電子書合作"
+        const taskItems = Object.keys(taskMapping);
+        const b2cItems = [
+            "取得:B2C銷售權利", // NEW
+            "取得：[灰熊]", "取得：[書紐]金石堂", "取得：[書紐]三民",
+            "取得：B2C經銷第三方平台權利", "取得： 電子教科書TRMS"
+        ];
+        const b2bItems = [
+            "取得:B2B銷售權利", // NEW
+            "取得:B2B_聯盟", "取得:B2B_公圖", "取得:B2B_CN"
+        ];
+
+        // [NEW] <表2-2> 顯示順序
+        const table2_2_Order = [
+            "取得:電子書合作",
+            "取得:B2C銷售權利",
+            "取得：[灰熊]",
+            "取得： 電子教科書TRMS",
+            "取得：[書紐]金石堂",
+            "取得：[書紐]三民",
+            "取得：B2C經銷第三方平台權利",
+            "取得:B2B銷售權利",
+            "取得:B2B_聯盟",
+            "取得:B2B_公圖",
+            "取得:B2B_CN"
+        ];
+
+        // <表4> 聯繫進度資料
+        // [MODIFIED] 添加 contactRateData 儲存聯繫比例
+        let staffContactProgressData = { data: {}, statuses: [], contactRateData: {} };
+        let ratingContactProgressData = { data: {}, statuses: [] };
+        let staffRatingProgressData = { data: {}, statuses: [] };
+
+        // <表4> 欄位固定順序
+        const fixedContactStatuses = [
+            "未聯繫",
+            "聯繫中",
+            "已聯繫，無意願洽談",
+            "已聯繫，有意願洽談",
+            "審約中",
+            "用印中",
+            "已簽回，已移交合約"
+        ];
+
+        // --- 2. Chart.js 通用設定 ---
+        // [REMOVED] commonOptions 因為圖一已刪除, 圖二有自己的設定
+        // const commonOptions = { ... };
+
+        // 圓環圖中心文字插件
+        const doughnutLabelPlugin = {
+            id: 'doughnutLabel',
+            beforeDraw: (chart) => {
+                if (chart.config.type === 'doughnut' && chart.data.datasets.length > 0 && chart.data.datasets[0].data.length > 0) {
+                    const { ctx, width, height } = chart;
+                    const dataValue = chart.data.datasets[0].data[0];
+
+                    ctx.restore();
+                    const fontSize = (height / 90).toFixed(2);
+                    ctx.font = `bold ${fontSize}em 'Noto Sans TC', sans-serif`;
+                    ctx.textBaseline = "middle";
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#111827';
+
+                    const text = dataValue.toFixed(1) + "%";
+                    const textX = width / 2;
+                    const textY = height / 2;
+
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }
+        };
+        // 全局註冊插件
+        Chart.register(doughnutLabelPlugin);
+
+
+        // --- 3. 頁面載入時執行 ---
+        window.addEventListener('load', () => {
+            // [MODIFIED] 預先渲染 <表1> (因為預設改為<表1>)
+            // renderTable();
+            initializeCharts(); // <-- 只初始化圖二容器
+
+            // 綁定檔案匯入事件
+            document.getElementById('csv-importer').addEventListener('change', handleFileImport);
+
+            // 綁定 Modal 關閉事件
+            const modal = document.getElementById('publisher-modal');
+            document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+
+            // 綁定 <表3> 表格點擊事件 (事件委派)
+            document.getElementById('data-table-body').addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('clickable-cell')) {
+                    const name = target.dataset.name;
+                    const type = target.dataset.type;
+                    showStaffModal(name, type);
+                }
+            });
+
+            // 綁定 <表2> 表格點擊事件 (事件委派)
+            document.getElementById('tab2-content').addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('clickable-cell')) {
+                    showTeamModal(target);
+                }
+            });
+
+            // 綁定 <表4> 表格點擊事件 (事件委派)
+            document.getElementById('tab4-content').addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('clickable-cell')) {
+                    const { key1, key2, key3, key4, title } = target.dataset;
+
+                    let listToShow = [];
+                    try {
+                        if (key4) { // <表4-4> 卡片
+                            listToShow = staffRatingProgressData.data[key2][key3][key4];
+                        } else if (key3) { // <表4-2> 或 <表4-3>
+                            listToShow = (key1 === 'staffContactProgressData') ? staffContactProgressData.data[key2][key3] : ratingContactProgressData.data[key2][key3];
+                        }
+                    } catch (err) {
+                        console.error("無法獲取列表:", err, target.dataset);
+                    }
+
+                    if (!listToShow) listToShow = [];
+                    const fullTitle = `${title} (${listToShow.length} 家)`;
+
+                    // [MODIFIED] 傳遞 deduplicate 參數給 Modal - B2C/B2B (表2-3, 2-4) 才需要去重
+                    const deduplicate = (key1 === 'b2cData' || key1 === 'b2bData');
+                    showDetailModal(listToShow, fullTitle, [{ header: "聯繫狀態", key: "status" }], deduplicate, listToShow.length); // Pass original length too
+                }
+            });
+
+
+            // 讓 showTab 函數在全域可見
+            window.showTab = showTab;
+            window.exportExcel = exportExcel;
+            window.downloadDemoTemplate = downloadDemoTemplate;
+
+        });
+
+        // 顯示錯誤訊息
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            document.getElementById('error-text').textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // 清除錯誤訊息
+        function clearError() {
+            const errorDiv = document.getElementById('error-message');
+            document.getElementById('error-text').textContent = '';
+            errorDiv.classList.add('hidden');
+        }
+
+        /**
+         * 4. 處理分頁切換
+         */
+        function showTab(tabId) {
+            const tabContents = {
+                'tab1': document.getElementById('tab1-content'),
+                'tab2': document.getElementById('tab2-content'),
+                'tab3': document.getElementById('tab3-content'),
+                'tab4': document.getElementById('tab4-content')
+            };
+            const navLinks = {
+                'tab1': document.getElementById('nav-tab1').querySelector('a'),
+                'tab2': document.getElementById('nav-tab2').querySelector('a'),
+                'tab3': document.getElementById('nav-tab3').querySelector('a'),
+                'tab4': document.getElementById('nav-tab4').querySelector('a')
+            };
+
+            // 隱藏所有內容, 移除所有啟用狀態
+            for (const id in tabContents) {
+                if (tabContents[id]) {
+                    tabContents[id].classList.add('hidden');
+                    tabContents[id].classList.remove('tab-active');
+                }
+                if (navLinks[id]) {
+                    navLinks[id].classList.remove('border-blue-600', 'text-blue-600', 'font-bold');
+                    navLinks[id].classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300', 'font-medium');
+                    navLinks[id].removeAttribute('aria-current');
+                }
+            }
+
+            // 顯示選擇的內容, 並設定為啟用狀態
+            if (tabContents[tabId]) {
+                tabContents[tabId].classList.remove('hidden');
+                tabContents[tabId].classList.add('tab-active');
+                navLinks[tabId].classList.add('border-blue-600', 'text-blue-600', 'font-bold');
+                navLinks[tabId].classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300', 'font-medium');
+                navLinks[tabId].setAttribute('aria-current', 'page');
+            }
+
+            // 如果是切換到 <表2>
+            if (tabId === 'tab2' && allImportedRows.length > 0) {
+                renderTeamTables();
+            }
+
+            // 如果是切換到 <表3>
+            if (tabId === 'tab3') {
+                 // 確保 <表3> 的表格在切換時渲染 (如果還沒渲染過)
+                 if(document.getElementById('data-table-body').innerHTML.trim() === '') {
+                     renderTable();
+                 }
+                updateAllVisuals(); // 會更新圖二
+            }
+
+            // 如果是切換到 <表4>
+            if (tabId === 'tab4' && allImportedRows.length > 0) {
+                renderContactRateProgressBars(); // [NEW] 渲染進度條
+                renderStaffContactProgressTable();
+                renderRatingContactProgressTable();
+                renderStaffProgressCards();
+            }
+        }
+
+
+        /**
+         * 5. 渲染表格內容 (<表3>)
+         */
+        function renderTable() {
+            const tableBody = document.getElementById('data-table-body');
+            tableBody.innerHTML = ''; // 清空現有內容
+
+            staffData.forEach((staff) => {
+                const selfRate = (staff.total === 0) ? 0 : ((staff.actual / staff.total) * 100).toFixed(1);
+                // [MODIFIED] 使用 lowTargetValue
+                const baseRate = ((staff.actual / lowTargetValue) * 100).toFixed(1);
+
+                const actualCell = staff.actual > 0
+                    ? `<td class="px-6 py-4 whitespace-nowrap text-sm clickable-cell" data-name="${staff.name}" data-type="Total">${staff.actual}</td>`
+                    : `<td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${staff.actual}</td>`;
+
+                const actualACell = staff.actual_A > 0
+                    ? `<td class="px-6 py-4 whitespace-nowrap text-sm clickable-cell" data-name="${staff.name}" data-type="A">${staff.actual_A}</td>`
+                    : `<td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${staff.actual_A}</td>`;
+
+                const actualBCell = staff.actual_B > 0
+                    ? `<td class="px-6 py-4 whitespace-nowrap text-sm clickable-cell" data-name="${staff.name}" data-type="B">${staff.actual_B}</td>`
+                    : `<td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${staff.actual_B}</td>`;
+
+                const actualCCell = staff.actual_C > 0
+                    ? `<td class="px-6 py-4 whitespace-nowrap text-sm clickable-cell" data-name="${staff.name}" data-type="C">${staff.actual_C}</td>`
+                    : `<td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${staff.actual_C}</td>`;
+
+                const row = `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${staff.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600">${staff.a}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600">${staff.b}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600">${staff.c}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">${staff.total}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-purple-600">${lowTargetValue}</td> <!-- Modified -->
+                        ${actualCell}
+                        ${actualACell}
+                        ${actualBCell}
+                        ${actualCCell}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">${selfRate}%</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-purple-600">${baseRate}%</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        /**
+         * 6. 初始化圖表 (<表3>) - [MODIFIED]
+         */
+        function initializeCharts() {
+            // --- 1. [REMOVED] 圖一相關程式碼 ---
+            // const ctxTotal = ...
+            // if (totalChartInstance) ...
+            // totalChartInstance = new Chart(...)
+
+            // --- 2. 初始化圖二 (圓環圖容器) ---
+            initializeRateDoughnutCharts();
+        }
+
+        /**
+         * 6b. [MODIFIED] 初始化圖二的圓環圖 (每個同仁兩個圖)
+         */
+        function initializeRateDoughnutCharts() {
+            const container = document.getElementById('rateChartContainer');
+            container.innerHTML = ''; // 清空容器
+            rateChartInstances = {}; // 清空舊實例物件
+
+            staffData.forEach((staff, index) => {
+                const selfRate = parseFloat((staff.total === 0) ? 0 : ((staff.actual / staff.total) * 100).toFixed(1));
+                 // [MODIFIED] 使用 lowTargetValue
+                const baseRate = parseFloat(((staff.actual / lowTargetValue) * 100).toFixed(1));
+                const remainingSelfRate = Math.max(0, 100 - selfRate);
+                const remainingBaseRate = Math.max(0, 100 - baseRate);
+
+                // --- 創建 DOM 結構 ---
+                const staffChartsWrapper = document.createElement('div'); // 包住同仁姓名和兩個圖
+                staffChartsWrapper.className = 'staff-rate-charts-wrapper'; // 用於 grid 佈局
+
+                const staffNameTitle = document.createElement('h3');
+                staffNameTitle.className = 'staff-chart-title';
+                staffNameTitle.textContent = staff.name;
+                staffChartsWrapper.appendChild(staffNameTitle);
+
+                const chartsContainer = document.createElement('div'); // 包住兩個圖, 用 flex 排列
+                chartsContainer.className = 'staff-rate-charts';
+                staffChartsWrapper.appendChild(chartsContainer);
+
+                // 1. 低標達成率圖 (Modified Label)
+                const baseWrapper = document.createElement('div');
+                baseWrapper.className = 'rate-doughnut-wrapper';
+                const baseCanvas = document.createElement('canvas');
+                baseCanvas.className = 'rate-doughnut-canvas';
+                baseCanvas.id = `baseRateChart-${index}`;
+                const baseLabel = document.createElement('div');
+                baseLabel.className = 'rate-doughnut-sublabel'; // 改用 sublabel 樣式
+                baseLabel.textContent = `低標達成率`; // Modified
+                baseWrapper.appendChild(baseCanvas);
+                baseWrapper.appendChild(baseLabel);
+                chartsContainer.appendChild(baseWrapper);
+
+                // 2. 自設達成率圖
+                const selfWrapper = document.createElement('div');
+                selfWrapper.className = 'rate-doughnut-wrapper';
+                const selfCanvas = document.createElement('canvas');
+                selfCanvas.className = 'rate-doughnut-canvas';
+                selfCanvas.id = `selfRateChart-${index}`;
+                const selfLabel = document.createElement('div');
+                selfLabel.className = 'rate-doughnut-sublabel'; // 改用 sublabel 樣式
+                selfLabel.textContent = `自設達成率`;
+                selfWrapper.appendChild(selfCanvas);
+                selfWrapper.appendChild(selfLabel);
+                chartsContainer.appendChild(selfWrapper);
+
+                container.appendChild(staffChartsWrapper); // 將整組加入 grid
+
+                // --- 創建 Chart.js 實例 ---
+                rateChartInstances[staff.name] = {}; // 初始化該同仁的圖表物件
+
+                // 1. 低標圖實例 (Modified Label)
+                const ctxBase = baseCanvas.getContext('2d');
+                rateChartInstances[staff.name].base = new Chart(ctxBase, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['低標達成', '未達成'], // Modified
+                        datasets: [{
+                            data: [baseRate, remainingBaseRate],
+                            backgroundColor: [
+                                'rgba(139, 92, 246, 0.8)', // 紫色
+                                'rgba(229, 231, 235, 0.8)' // 灰色
+                            ],
+                            borderColor: ['rgba(139, 92, 246, 1)', 'rgba(209, 213, 219, 1)'],
+                            borderWidth: 1, hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: true, cutout: '70%',
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } } // 啟用 tooltip
+                    }
+                    // 插件 doughnutLabelPlugin 已全局註冊
+                });
+
+                // 2. 自設圖實例
+                const ctxSelf = selfCanvas.getContext('2d');
+                rateChartInstances[staff.name].self = new Chart(ctxSelf, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['自設達成', '未達成'],
+                        datasets: [{
+                            data: [selfRate, remainingSelfRate],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)', // 藍色
+                                'rgba(229, 231, 235, 0.8)' // 灰色
+                            ],
+                            borderColor: ['rgba(59, 130, 246, 1)', 'rgba(209, 213, 219, 1)'],
+                            borderWidth: 1, hoverOffset: 4
+                        }]
+                    },
+                     options: {
+                        responsive: true, maintainAspectRatio: true, cutout: '70%',
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } } // 啟用 tooltip
+                    }
+                    // 插件 doughnutLabelPlugin 已全局註冊
+                });
+            });
+        }
+
+
+        /**
+         * 7. 處理 CSV / XLSX 檔案匯入
+         */
+        function handleFileImport(event) {
+            clearError();
+            document.getElementById('import-status').innerHTML = '<p class="text-gray-500">處理中...</p>';
+
+            const file = event.target.files[0];
+            if (!file) {
+                document.getElementById('import-status').innerHTML = '<p class="text-gray-500">尚未匯入檔案。</p>';
+                return;
+            }
+
+            const reader = new FileReader();
+
+            if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+                reader.onload = function(e) {
+                    processTextData(e.target.result);
+                };
+                reader.onerror = function() {
+                    showError("無法讀取 CSV 檔案。");
+                    document.getElementById('import-status').innerHTML = '<p class="text-red-600">讀取 CSV 檔案失敗。</p>';
+                };
+                reader.readAsText(file);
+            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                reader.onload = function(e) {
+                    processExcelData(e.target.result);
+                };
+                reader.onerror = function() {
+                    showError("無法讀取 Excel 檔案。");
+                    document.getElementById('import-status').innerHTML = '<p class="text-red-600">讀取 Excel 檔案失敗。</p>';
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                showError("不支援的檔案格式。請上傳 .csv 或 .xlsx 檔案。");
+                document.getElementById('import-status').innerHTML = '<p class="text-red-600">不支援的檔案格式。</p>';
+            }
+            event.target.value = null;
+        }
+
+        /**
+         * 8a. 解析 CSV (純文字) 數據
+         */
+        function processTextData(csvText) {
+            const lines = csvText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+            if (lines.length < 2) {
+                showError("CSV 檔案不包含數據，或格式不符。");
+                document.getElementById('import-status').innerHTML = '<p class="text-red-600">CSV 檔案不包含數據。</p>';
+                return;
+            }
+            const rows = lines.map(line => line.split(','));
+            resetAndProcessData(rows);
+        }
+
+        /**
+         * 8b. 解析 Excel (ArrayBuffer) 數據
+         */
+        function processExcelData(data) {
+            try {
+                const wb = XLSX.read(data, { type: 'array' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
+
+                if (rows.length < 2) {
+                    showError("Excel 檔案不包含數據，或格式不符。");
+                    document.getElementById('import-status').innerHTML = '<p class="text-red-600">Excel 檔案不包含數據。</p>';
+                    return;
+                }
+                resetAndProcessData(rows);
+
+            } catch (err) {
+                console.error(err);
+                showError("解析 Excel 檔案時發生錯誤。請確認檔案未損毀。");
+                document.getElementById('import-status').innerHTML = '<p class="text-red-600">解析 Excel 檔案失敗。</p>';
+            }
+        }
+
+        /**
+         * 8c. 重設 staffData 並處理匯入的 row 數據
+         */
+        function resetAndProcessData(rows) {
+            allImportedRows = rows;
+
+            // --- 處理 <表3> 邏輯 (個人) ---
+            staffData.forEach(staff => {
+                staff.actual = 0;
+                staff.actual_A = 0;
+                staff.actual_B = 0;
+                staff.actual_C = 0;
+                staff.signedList = [];
+            });
+
+            const COL_INDEX_PUB = 0;    // A欄: 出版社名稱
+            const COL_INDEX_CONTRACT = 1; // B欄: 合約編號
+            const COL_INDEX_NAME = 2;     // C欄: 負責同仁
+            const COL_INDEX_RATING = 3;   // D欄: 分級
+            const COL_INDEX_STATUS = 4;   // E欄: 聯繫狀態
+            const TARGET_STATUS = "已簽回，已移交合約";
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row && row.length > COL_INDEX_STATUS) {
+                    const status = row[COL_INDEX_STATUS] ? String(row[COL_INDEX_STATUS]).trim() : '';
+                    if (status === TARGET_STATUS) {
+                        const name = row[COL_INDEX_NAME] ? String(row[COL_INDEX_NAME]).trim() : '';
+                        const staff = staffData.find(s => s.name === name);
+                        if (staff) {
+                            const publisher = row[COL_INDEX_PUB] ? String(row[COL_INDEX_PUB]).trim() : 'N/A';
+                            const contractId = row[COL_INDEX_CONTRACT] ? String(row[COL_INDEX_CONTRACT]).trim() : 'N/A';
+                            const rating = row[COL_INDEX_RATING] ? String(row[COL_INDEX_RATING]).trim() : 'N/A';
+                            staff.signedList.push({
+                                publisher: publisher,
+                                contractId: contractId,
+                                name: name,
+                                rating: rating
+                            });
+                        }
+                    }
+                }
+            }
+
+            staffData.forEach(staff => {
+                staff.actual = staff.signedList.length;
+                staff.actual_A = staff.signedList.filter(p => p.rating === 'A').length;
+                staff.actual_B = staff.signedList.filter(p => p.rating === 'B').length;
+                staff.actual_C = staff.signedList.filter(p => p.rating === 'C').length;
+            });
+
+            updateAllVisuals(); // <-- 更新圖表和表格
+
+            // 處理 <表2> 邏輯 (團隊)
+            globalTeamData = processTeamData(rows);
+
+            // [NEW] 處理 <表4> 邏輯 (聯繫進度)
+            const progressData = processContactProgress(rows);
+            staffContactProgressData = progressData.staffData;
+            ratingContactProgressData = progressData.ratingData;
+            staffRatingProgressData = progressData.staffRatingData;
+
+            // 更新 <表1> 的狀態訊息
+            const statusEl = document.getElementById('import-status');
+            if (statusEl) {
+                const totalRows = rows.length > 0 ? rows.length - 1 : 0;
+                 // [MODIFIED] 更新連結文字順序
+                statusEl.innerHTML = `
+                    <p class="text-lg text-green-700 font-semibold">✅ 資料匯入成功！</p>
+                    <p class="text-gray-600 mt-2">已處理 ${totalRows} 行數據。
+                    <a href="#" onclick="showTab('tab2'); return false;" class="text-blue-600 hover:underline font-medium">點擊切換至 &lt;表2&gt;</a>或<a href="#" onclick="showTab('tab3'); return false;" class="text-blue-600 hover:underline font-medium">&lt;表3&gt;</a> 或 <a href="#" onclick="showTab('tab4'); return false;" class="text-blue-600 hover:underline font-medium">&lt;表4&gt;</a>
+                    查看更新。</p>`;
+            }
+
+            // [NEW] 匯入後主動渲染所有表
+            renderTeamTables();
+            renderContactRateProgressBars(); // [NEW]
+            renderStaffContactProgressTable();
+            renderRatingContactProgressTable();
+            renderStaffProgressCards();
+        }
+
+
+        /**
+         * 9. 統一更新所有視覺元素 (<表3> 圖表 + 表格) - [MODIFIED]
+         */
+        function updateAllVisuals() {
+            // 1. 重繪表格
+            renderTable();
+
+            // 2. [REMOVED] 圖一相關更新邏輯
+            // const labels = ...
+            // const dataTotal = ...
+            // const dataActual = ...
+            // if (totalChartInstance) { ... }
+
+            // 3. 更新圖二 (圓環圖) - 重新初始化
+            Object.values(rateChartInstances).forEach(charts => {
+                if (charts.base) charts.base.destroy();
+                if (charts.self) charts.self.destroy();
+            });
+            initializeRateDoughnutCharts();
+        }
+
+        /**
+         * 10. 顯示 Modal 彈出視窗 (for <表3>)
+         */
+        function showStaffModal(staffName, ratingType) {
+            const staff = staffData.find(s => s.name === staffName);
+            if (!staff) return;
+            let listToShow = [];
+            let titleType = "";
+            if (ratingType === 'Total') {
+                listToShow = staff.signedList;
+                titleType = "已簽約總覽";
+            } else if (ratingType === 'A' || ratingType === 'B' || ratingType === 'C') {
+                listToShow = staff.signedList.filter(p => p.rating === ratingType);
+                titleType = `已簽-${ratingType}級`;
+            }
+            const title = `${staff.name} - ${titleType} (${listToShow.length} 家)`;
+            showDetailModal(listToShow, title);
+        }
+
+        /**
+         * 10b. [MODIFIED] 顯示 Modal 彈出視窗 (for <表2>) - 加入去重判斷, 修正單位顯示
+         */
+        function showTeamModal(targetCell) {
+            const { key1, key2, key3, title } = targetCell.dataset;
+            let listToShow = [];
+            try {
+                 // Access data more safely
+                if (key3 && globalTeamData[key1] && globalTeamData[key1][key2]) {
+                     listToShow = globalTeamData[key1][key2][key3] || [];
+                 } else if (key2 && globalTeamData[key1]) {
+                     // Special handling for teamGoalData total
+                     listToShow = (key1 === 'teamGoalData' && key2 === 'total' && globalTeamData[key1][key2])
+                         ? (globalTeamData[key1][key2]['total'] || [])
+                         : (globalTeamData[key1][key2] || []);
+                 } else if (globalTeamData[key1]) {
+                     listToShow = globalTeamData[key1]['total'] || [];
+                 }
+
+            } catch (e) {
+                console.error("無法從 globalTeamData 獲取列表:", key1, key2, key3, e);
+                listToShow = []; // Ensure listToShow is an array on error
+            }
+
+
+            // [MODIFIED] 判斷單位是"家"還是"家次"
+            let unit = '家次'; // 預設
+             // 表2-1 的資料都用 "家"
+            if (key1 === 'teamGoalData') {
+                unit = '家';
+            }
+            // 表2-3/2-4 的總計用 "家" (因為去重)
+            // [MODIFIED] Also check for monthly B2C/B2B clicks
+             else if (key1 === 'b2cData' || key1 === 'b2bData') {
+                 unit = '家'; // B2C/B2B always show unique publishers ('家')
+             }
+
+
+            // [MODIFIED] Always deduplicate for b2cData and b2bData
+            const deduplicate = (key1 === 'b2cData' || key1 === 'b2bData');
+            const originalCount = listToShow.length; // 先記錄原始數量
+
+            // 去重邏輯 (如果需要)
+            let uniqueList = listToShow;
+            if (deduplicate) {
+                 const seenPublishers = new Set();
+                 uniqueList = listToShow.filter(item => {
+                     // 確保 item 是物件且有 publisher 屬性
+                     if (typeof item === 'object' && item !== null && item.hasOwnProperty('publisher') && item.publisher !== 'N/A') {
+                         if (seenPublishers.has(item.publisher)) {
+                             return false;
+                         } else {
+                             seenPublishers.add(item.publisher);
+                             return true;
+                         }
+                     }
+                     return false; // 如果 item 不是預期格式，過濾掉
+                 });
+            }
+
+            const displayCount = uniqueList.length; // 實際顯示數量
+            // [MODIFIED] 使用 unit 變數
+            const fullTitle = `${title} (${displayCount} ${unit})`;
+
+            // 傳遞去重後的列表和原始數量
+            showDetailModal(uniqueList, fullTitle, [], deduplicate, originalCount);
+        }
+
+
+        /**
+         * 10c. [MODIFIED] 顯示詳細資料 Modal (通用) - 加入去重備註
+         */
+        function showDetailModal(list, title, extraColumns = [], showDuplicateInfo = false, originalCount = 0) {
+             const modalTitle = document.getElementById('modal-title');
+            modalTitle.textContent = title;
+            const modalBody = document.getElementById('modal-body');
+
+            if (!list || list.length === 0) {
+                modalBody.innerHTML = `<p class="text-gray-600">此分類目前沒有資料。</p>`;
+            } else {
+                let tableHtml = `
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">出版社名稱</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">合約編號</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">負責同仁</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">分級</th>
+                `;
+                // 插入額外欄位標頭
+                extraColumns.forEach(col => {
+                    tableHtml += `<th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">${col.header}</th>`;
+                });
+                tableHtml += `</tr></thead><tbody class="bg-white divide-y divide-gray-200">`;
+
+                list.forEach(p => {
+                    // 基本檢查 p 是否是物件
+                     if (typeof p !== 'object' || p === null) {
+                        console.warn("Skipping invalid item in list:", p);
+                        return; // 跳過無效項目
+                     }
+                    tableHtml += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-800">${p.publisher || 'N/A'}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${p.contractId || 'N/A'}</td> <!-- Corrected typo -->
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${p.name || 'N/A'}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${p.rating || 'N/A'}</td>
+                    `;
+                    // 插入額外欄位資料
+                    extraColumns.forEach(col => {
+                        tableHtml += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${p[col.key] || 'N/A'}</td>`;
+                    });
+                    tableHtml += `</tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+
+                 // [NEW] 加入去重備註 (如果需要)
+                if (showDuplicateInfo) {
+                    tableHtml += `<p class="text-sm text-gray-600 mt-4 pt-4 border-t border-gray-200">※備註：原始資料 ${originalCount} 筆家次，排除重複出版社後共 ${list.length} 家。</p>`;
+                }
+
+                modalBody.innerHTML = tableHtml;
+            }
+            document.getElementById('publisher-modal').classList.add('show');
+        }
+
+
+        // --- <表2> 相關函數 ---
+
+        /**
+         * 11. 解析日期
+         */
+        function parseDate(val) {
+            if (!val) return null;
+            let date;
+            if (typeof val === 'number') {
+                 // Excel date number handling (adjusting for the 1900 leap year bug)
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel epoch starts Dec 30, 1899 for calculation
+                date = new Date(excelEpoch.getTime() + val * 86400 * 1000);
+            } else if (typeof val === 'string') {
+                 // Try parsing YYYY/M/D or other common formats
+                 // Prioritize YYYY/M/D
+                const parts = val.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+                if (parts) {
+                     const year = parseInt(parts[1], 10);
+                     const month = parseInt(parts[2], 10) - 1; // Month is 0-indexed
+                     const day = parseInt(parts[3], 10);
+                     // Basic validation for parsed parts
+                     if (year >= 1900 && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                         date = new Date(Date.UTC(year, month, day)); // Use UTC to avoid timezone issues
+                     } else {
+                         date = new Date(val); // Fallback if parts are invalid
+                     }
+                } else {
+                     date = new Date(val); // Fallback for other string formats
+                }
+            } else {
+                return null;
+            }
+             // Final check if the resulting date object is valid
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                return date;
+            }
+            return null; // Return null if invalid
+        }
+
+
+        /**
+         * 12. 查找 G-Q 欄中最早的日期
+         */
+        function findEarliestDate(rowSlice) {
+            let earliestDate = null;
+            for (const val of rowSlice) {
+                const date = parseDate(val);
+                // Ensure date is valid and is in 2025 BEFORE comparison
+                if (date && date.getUTCFullYear() === 2025) {
+                    if (earliestDate === null || date.getTime() < earliestDate.getTime()) { // Compare timestamps
+                        earliestDate = date;
+                    }
+                }
+            }
+            return earliestDate; // Might be null if no valid 2025 date found
+        }
+
+
+        /**
+         * 14. 從 row 獲取標準化的出版社資料
+         */
+        function getPublisherData(row) {
+            const COL_INDEX_PUB = 0;    // A欄: 出版社名稱
+            const COL_INDEX_CONTRACT = 1; // B欄: 合約編號
+            const COL_INDEX_NAME = 2;     // C欄: 負責同仁
+            const COL_INDEX_RATING = 3;   // D欄: 分級
+            const COL_INDEX_STATUS = 4;   // E欄: 聯繫狀態
+
+            return {
+                publisher: row[COL_INDEX_PUB] ? String(row[COL_INDEX_PUB]).trim() : 'N/A',
+                contractId: row[COL_INDEX_CONTRACT] ? String(row[COL_INDEX_CONTRACT]).trim() : 'N/A',
+                name: row[COL_INDEX_NAME] ? String(row[COL_INDEX_NAME]).trim() : 'N/A',
+                rating: row[COL_INDEX_RATING] ? String(row[COL_INDEX_RATING]).trim() : 'N/A',
+                status: row[COL_INDEX_STATUS] ? String(row[COL_INDEX_STATUS]).trim() : 'N/A' // [NEW]
+            };
+        }
+
+
+        /**
+         * 15. 處理 <表2> 的所有數據
+         */
+        function processTeamData(rows) {
+            let newTeamGoalData = { 8: { total: [] }, 9: { total: [] }, 10: { total: [] }, 11: { total: [] }, 12: { total: [] }, total: { total: [] } };
+            let newTeamTaskData = {};
+            // [MODIFIED] 初始化時包含電子書合作
+            taskItems.forEach(item => {
+                newTeamTaskData[item] = { 8: [], 9: [], 10: [], 11: [], 12: [], total: [] };
+            });
+            let processedPublishers = new Set();
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row) continue;
+                const publisherData = getPublisherData(row);
+
+                // --- <表2-1> 邏輯 ---
+                // 只處理有出版社名稱且尚未處理過的出版社
+                if (publisherData.publisher !== 'N/A' && !processedPublishers.has(publisherData.publisher)) {
+                    const dateSlice = row.slice(DATE_COL_START, DATE_COL_END + 1);
+                    const earliestDate = findEarliestDate(dateSlice); // earliestDate might be null
+
+                    // 確保 earliestDate 存在且有效
+                    if (earliestDate) {
+                        const month = earliestDate.getUTCMonth() + 1; // Use UTC month
+                        if (month >= 8 && month <= 12) {
+                            // Ensure month key exists before pushing
+                             if (!newTeamGoalData[month]) newTeamGoalData[month] = { total: [] };
+                            newTeamGoalData[month].total.push(publisherData);
+                             if (!newTeamGoalData.total) newTeamGoalData.total = { total: [] };
+                            newTeamGoalData.total.total.push(publisherData);
+                        }
+                    }
+                    processedPublishers.add(publisherData.publisher); // Add even if no date found for this row
+                }
+
+                // --- <表2-2> 邏輯 ---
+                // [MODIFIED] 遍歷所有任務，包含電子書合作
+                for (const item of taskItems) {
+                    const colIndex = taskMapping[item];
+                    // Defensive check: Ensure row has enough columns
+                    if (row.length <= colIndex) continue;
+
+                    const date = parseDate(row[colIndex]); // date might be null
+
+                    // Ensure date is valid and is in 2025 BEFORE processing
+                    if (date && date.getUTCFullYear() === 2025) {
+                        const month = date.getUTCMonth() + 1; // Use UTC month
+                        if (month >= 8 && month <= 12) {
+                             // Ensure task item and month are initialized
+                             if (!newTeamTaskData[item]) {
+                                 console.warn(`Task item "${item}" object was not initialized.`);
+                                 newTeamTaskData[item] = { 8: [], 9: [], 10: [], 11: [], 12: [], total: [] };
+                             }
+                              if (!newTeamTaskData[item][month]) newTeamTaskData[item][month] = [];
+                              if (!newTeamTaskData[item].total) newTeamTaskData[item].total = [];
+
+                            newTeamTaskData[item][month].push(publisherData);
+                            newTeamTaskData[item].total.push(publisherData);
+                        }
+                    }
+                }
+            }
+
+
+            // --- <表2-3> & <表2-4> 邏輯 ---
+            let newB2CData = { 8: [], 9: [], 10: [], 11: [], 12: [], total: [] };
+            for (const item of b2cItems) {
+                 if (!newTeamTaskData[item]) continue; // 如果task不存在，跳過
+                for (let m = 8; m <= 12; m++) {
+                     // Ensure month array exists before concatenating
+                     if (newTeamTaskData[item][m]) {
+                         newB2CData[m] = newB2CData[m].concat(newTeamTaskData[item][m]);
+                     }
+                }
+                 // Ensure total array exists before concatenating
+                 if (newTeamTaskData[item].total) {
+                    newB2CData.total = newB2CData.total.concat(newTeamTaskData[item].total);
+                 }
+            }
+            let newB2BData = { 8: [], 9: [], 10: [], 11: [], 12: [], total: [] };
+            for (const item of b2bItems) {
+                 if (!newTeamTaskData[item]) continue; // 如果task不存在，跳過
+                for (let m = 8; m <= 12; m++) {
+                     // Ensure month array exists before concatenating
+                     if (newTeamTaskData[item][m]) {
+                        newB2BData[m] = newB2BData[m].concat(newTeamTaskData[item][m]);
+                     }
+                }
+                 // Ensure total array exists before concatenating
+                 if (newTeamTaskData[item].total) {
+                     newB2BData.total = newB2BData.total.concat(newTeamTaskData[item].total);
+                 }
+            }
+            return { teamGoalData: newTeamGoalData, teamTaskData: newTeamTaskData, b2cData: newB2CData, b2bData: newB2BData };
+        }
+
+
+        /**
+         * 16. 渲染可點擊的儲存格 (for <表2>)
+         */
+        function renderClickableCell(list, title, key1, key2, key3 = '') {
+            const count = (list && list.length) ? list.length : 0;
+            if (count > 0) {
+                return `<td class="clickable-cell" data-title="${title}" data-key1="${key1}" data-key2="${key2}" data-key3="${key3 || ''}">${count}</td>`;
+            } else {
+                return `<td>${count}</td>`;
+            }
+        }
+
+        /**
+         * 17. [MODIFIED] 渲染 <表2> 的所有表格 (加入 B2C/B2B/電子書合作 行顏色, 更新目標數字, 更新表頭)
+         */
+        function renderTeamTables() {
+            // Add robust checks for data existence
+            if (!globalTeamData || typeof globalTeamData !== 'object' ||
+                !globalTeamData.teamGoalData || typeof globalTeamData.teamGoalData !== 'object' ||
+                !globalTeamData.teamTaskData || typeof globalTeamData.teamTaskData !== 'object' ||
+                !globalTeamData.b2cData || typeof globalTeamData.b2cData !== 'object' ||
+                !globalTeamData.b2bData || typeof globalTeamData.b2bData !== 'object') {
+
+                console.warn("Global team data is missing or invalid. Rendering placeholder.");
+                const placeholder = '<tr><td colspan="7" class="text-center p-4 text-gray-500">請先至 &lt;表1&gt; 匯入資料。</td></tr>';
+                document.getElementById('team-goal-table-head').innerHTML = '';
+                document.getElementById('team-goal-table-body').innerHTML = placeholder.replace('colspan="7"', 'colspan="4"');
+                document.getElementById('team-task-table').innerHTML = placeholder;
+                document.getElementById('team-b2c-table').innerHTML = placeholder;
+                document.getElementById('team-b2b-table').innerHTML = placeholder;
+                return;
+            }
+
+
+            const { teamGoalData, teamTaskData, b2cData, b2bData } = globalTeamData;
+
+            // <表2-1>
+            const goalTableHead = document.getElementById('team-goal-table-head');
+             // [MODIFIED] 更新表頭文字
+            goalTableHead.innerHTML = `<tr><th>月份</th><th>目標 (家)</th><th>完成簽約任務(家)</th><th>達成率 (%)</th></tr>`;
+            const goalTableBody = document.getElementById('team-goal-table-body');
+            goalTableBody.innerHTML = '';
+            // [MODIFIED] 更新目標數字
+            const targets = { 8: 10, 9: 14, 10: 14, 11: 12, 12: 8, total: 58 };
+            const months = [8, 9, 10, 11, 12];
+            months.forEach(m => {
+                const target = targets[m];
+                 // Robust access with fallback to empty array
+                const totalList = teamGoalData[m]?.total || [];
+                const totalCount = totalList.length;
+                const rate = (target > 0 ? (totalCount / target * 100) : 0).toFixed(1);
+                let row = `<tr>`;
+                row += `<td>${m}月</td>`;
+                row += `<td>${target}</td>`;
+                row += renderClickableCell(totalList, `${m}月 - 總家數`, 'teamGoalData', m, 'total');
+                row += `<td class="highlight-row">${rate}%</td>`;
+                row += `</tr>`;
+                goalTableBody.innerHTML += row;
+            });
+            const totalTarget = targets.total;
+             // Robust access with fallback to empty array
+            const totalTotalList = teamGoalData.total?.total || [];
+            const totalTotalCount = totalTotalList.length;
+            const totalRate = (totalTarget > 0 ? (totalTotalCount / totalTarget * 100) : 0).toFixed(1);
+            goalTableBody.innerHTML += `
+                <tr class="total-row">
+                    <td>總計</td>
+                    <td>${totalTarget}</td>
+                    ${renderClickableCell(totalTotalList, `總計 - 總家數`, 'teamGoalData', 'total', 'total')}
+                    <td class="highlight-row">${totalRate}%</td>
+                </tr>
+            `;
+
+            // <表2-2>
+            const taskTableBody = document.getElementById('team-task-table');
+            taskTableBody.innerHTML = '';
+            // [MODIFIED] 將電子書合作移到最前面
+            // const orderedTaskItems = ["取得:電子書合作", ...taskItems.filter(item => item !== "取得:電子書合作")];
+            // [MODIFIED] 使用 table2_2_Order (您指定的順序)
+            table2_2_Order.forEach(item => {
+                // 如果 teamTaskData 中沒有這個 item (例如剛加入，舊資料沒有)，則跳過
+                if (!teamTaskData[item]) {
+                    console.warn(`[renderTeamTables] 找不到任務資料: ${item}，跳過渲染。`);
+                    return;
+                }
+
+                const data = teamTaskData[item];
+                // [MODIFIED] 判斷 B2C/B2B/電子書合作 並添加 class
+                let rowClass = '';
+                if (item === "取得:電子書合作") {
+                    rowClass = 'ebook-coop-row';
+                } else if (b2cItems.includes(item)) {
+                    rowClass = 'b2c-row';
+                } else if (b2bItems.includes(item)) {
+                    rowClass = 'b2b-row';
+                }
+
+                let row = `<tr class="${rowClass}"><td>${item}</td>`;
+                for (let m = 8; m <= 12; m++) {
+                    // Robust access with fallback to empty array
+                    row += renderClickableCell(data[m] || [], `${item} - ${m}月`, 'teamTaskData', item, String(m));
+                }
+                 // Robust access with fallback to empty array
+                row += renderClickableCell(data.total || [], `${item} - 小計`, 'teamTaskData', item, 'total');
+                row += `</tr>`;
+                taskTableBody.innerHTML += row;
+            });
+
+            // <表2-3> B2C
+            const b2cTableBody = document.getElementById('team-b2c-table');
+            let b2cRow = `<tr class="total-row"><td>B2C 總計</td>`; // 使用 total-row 樣式
+            for (let m = 8; m <= 12; m++) {
+                // Robust access with fallback to empty array
+                b2cRow += renderClickableCell(b2cData[m] || [], `B2C 總計 - ${m}月`, 'b2cData', String(m));
+            }
+             // Robust access with fallback to empty array
+            b2cRow += renderClickableCell(b2cData.total || [], `B2C 總計 - 小計`, 'b2cData', 'total');
+            b2cRow += `</tr>`;
+            b2cTableBody.innerHTML = b2cRow;
+
+            // <表2-4> B2B
+            const b2bTableBody = document.getElementById('team-b2b-table');
+            let b2bRow = `<tr class="total-row"><td>B2B 總計</td>`; // 使用 total-row 樣式
+            for (let m = 8; m <= 12; m++) {
+                 // Robust access with fallback to empty array
+                b2bRow += renderClickableCell(b2bData[m] || [], `B2B 總計 - ${m}月`, 'b2bData', String(m));
+            }
+            // Robust access with fallback to empty array
+            b2bRow += renderClickableCell(b2bData.total || [], `B2B 總計 - 小計`, 'b2bData', 'total');
+            b2bRow += `</tr>`;
+            b2bTableBody.innerHTML = b2bRow;
+        }
+
+
+        // --- [NEW] <表4> 相關函數 ---
+
+        /**
+         * 18. [MODIFIED] 處理 <表4> 聯繫進度數據 (增加聯繫比例計算)
+         */
+        function processContactProgress(rows) {
+            let staffProgress = {}; // 依同仁
+            let ratingProgress = { 'A': {}, 'B': {}, 'C': {}, 'N/A': {}, 'Total': {} }; // 依分級
+            let staffRatingProgress = {}; // 依同仁再依分級 (for 卡片)
+            let allStatuses = new Set();
+            let contactRateCalc = {}; // [NEW] 用於計算聯繫比例 { name: { total: 0, contacted: 0 } }
+
+            ['A', 'B', 'C', 'N/A', 'Total'].forEach(r => ratingProgress[r] = { total: [] });
+
+            // 遍歷所有行
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length < 5) continue;
+
+                const pData = getPublisherData(row);
+                if (pData.publisher === 'N/A') continue; // 忽略沒有出版社名稱的
+
+                const name = pData.name;
+                const rating = ['A', 'B', 'C'].includes(pData.rating) ? pData.rating : 'N/A';
+                const status = pData.status || "未分類";
+                allStatuses.add(status);
+
+                // [MODIFIED] 1. & 3. 處理 staffProgress (表4-1) 和 staffRatingProgress (表4-3)
+                if (name) { // 只有當有同仁姓名時才處理
+                    // 初始化 (如果不存在)
+                    if (!staffProgress[name]) {
+                        staffProgress[name] = { total: [] };
+                    }
+                    if (!staffRatingProgress[name]) {
+                        staffRatingProgress[name] = {
+                            'A': { total: [] },
+                            'B': { total: [] },
+                            'C': { total: [] },
+                            'N/A': { total: [] },
+                            'Total': { total: [] }
+                        };
+                    }
+                    if (!contactRateCalc[name]) { // [NEW] 初始化聯繫比例計算
+                        contactRateCalc[name] = { total: 0, contacted: 0 };
+                    }
+
+                    // 1. 處理 staffProgress (表4-1)
+                    if (!staffProgress[name][status]) staffProgress[name][status] = [];
+                    staffProgress[name][status].push(pData);
+                    staffProgress[name].total.push(pData);
+
+                    // [NEW] 計算聯繫比例
+                    contactRateCalc[name].total++;
+                    if (status !== "未聯繫") {
+                        contactRateCalc[name].contacted++;
+                    }
+
+                    // 3. 處理 staffRatingProgress (表4-3)
+                    // 該分級
+                    if (!staffRatingProgress[name][rating][status]) staffRatingProgress[name][rating][status] = [];
+                    staffRatingProgress[name][rating][status].push(pData);
+                    staffRatingProgress[name][rating].total.push(pData);
+                    // 該同仁總計
+                    if (!staffRatingProgress[name]['Total'][status]) staffRatingProgress[name]['Total'][status] = [];
+                    staffRatingProgress[name]['Total'][status].push(pData);
+                    staffRatingProgress[name]['Total'].total.push(pData);
+                }
+
+                // 2. 處理 ratingProgress (表4-2) (無論是否有同仁姓名都統計)
+                if (!ratingProgress[rating][status]) ratingProgress[rating][status] = [];
+                if (!ratingProgress['Total'][status]) ratingProgress['Total'][status] = [];
+                ratingProgress[rating][status].push(pData);
+                ratingProgress[rating].total.push(pData);
+                ratingProgress['Total'][status].push(pData);
+                ratingProgress['Total'].total.push(pData);
+            }
+
+            // 排序狀態
+            const sortedStatuses = fixedContactStatuses.filter(s => allStatuses.has(s));
+            allStatuses.forEach(s => {
+                if (!fixedContactStatuses.includes(s)) sortedStatuses.push(s);
+            });
+
+            // [NEW] 計算最終聯繫比例
+            let finalContactRateData = {};
+            for (const name in contactRateCalc) {
+                const total = contactRateCalc[name].total;
+                const contacted = contactRateCalc[name].contacted;
+                finalContactRateData[name] = {
+                    contactedCount: contacted,
+                    totalCount: total,
+                    contactRate: total > 0 ? (contacted / total * 100).toFixed(1) : 0
+                };
+            }
+
+            return {
+                staffData: { data: staffProgress, statuses: sortedStatuses, contactRateData: finalContactRateData }, // [MODIFIED]
+                ratingData: { data: ratingProgress, statuses: sortedStatuses },
+                staffRatingData: { data: staffRatingProgress, statuses: sortedStatuses }
+            };
+        }
+
+        /**
+         * 19. [NEW] 取得狀態的 CSS class
+         */
+        function getStatusClass(status) {
+            if (status === "已簽回，已移交合約") {
+                return 'status-signed';
+            }
+            if (["聯繫中", "已聯繫，有意願洽談", "審約中", "用印中"].includes(status)) {
+                return 'status-negotiating';
+            }
+            return 'status-other';
+        }
+
+        /**
+         * 20. [NEW] 渲染可點擊的儲存格 (for <表4-1> & <表4-2>)
+         */
+        function renderProgressClickableCell(list, title, key1, key2, key3) {
+            const count = (list && list.length) ? list.length : 0;
+            if (count > 0) {
+                return `<td class="clickable-cell" data-title="${title}" data-key1="${key1}" data-key2="${key2}" data-key3="${key3}">${count}</td>`;
+            } else {
+                return `<td>${count}</td>`;
+            }
+        }
+
+        /** * 20b. [NEW] 渲染 <表4-0> 同仁聯繫進度條
+         */
+        function renderContactRateProgressBars() {
+            const container = document.getElementById('contact-rate-progress-bars');
+            const { contactRateData } = staffContactProgressData; // 從 staffContactProgressData 取出
+
+            if (!contactRateData || Object.keys(contactRateData).length === 0) {
+                 container.innerHTML = '<p class="text-center p-4 text-gray-500 col-span-1 md:col-span-2">請先至 &lt;表1&gt; 匯入資料。</p>';
+                 return;
+            }
+
+            container.innerHTML = ''; // 清空
+
+            const staffNames = Object.keys(contactRateData);
+            staffNames.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+            staffNames.forEach(name => {
+                const data = contactRateData[name];
+                const rate = parseFloat(data.contactRate);
+
+                const barHtml = `
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-label">
+                            <span class="progress-bar-name">${name}</span>
+                            <span class="progress-bar-percentage">${rate.toFixed(1)}%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${rate}%;"></div>
+                        </div>
+                        <div class="progress-bar-counts">
+                            ${data.contactedCount} / ${data.totalCount}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += barHtml;
+            });
+        }
+
+        /**
+         * 21. [NEW] 渲染 <表4-1> (依同仁)
+         */
+        function renderStaffContactProgressTable() {
+            const container = document.getElementById('staff-contact-progress-table-container');
+            const { data, statuses } = staffContactProgressData;
+
+            if (statuses.length === 0) {
+                container.innerHTML = '<p class="text-center p-4 text-gray-500">請先至 &lt;表1&gt; 匯入資料。</p>';
+                return;
+            }
+
+            let tableHtml = '<table class="team-table"><thead><tr><th class="!text-left">負責同仁</th>';
+            statuses.forEach(status => {
+                tableHtml += `<th class="${getStatusClass(status)}">${status}</th>`;
+            });
+            tableHtml += '<th class="highlight-col">母體總數</th></tr></thead><tbody>';
+
+            const staffNames = Object.keys(data);
+            staffNames.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+            staffNames.forEach(name => {
+                tableHtml += `<tr class="hover:bg-gray-50"><td class="!font-medium">${name}</td>`;
+                const staffRow = data[name];
+
+                statuses.forEach(status => {
+                    const list = staffRow[status] || [];
+                    const title = `${name} - ${status}`;
+                    tableHtml += renderProgressClickableCell(list, title, 'staffContactProgressData', name, status);
+                });
+
+                const totalList = staffRow.total || [];
+                const totalTitle = `${name} - 母體總數`;
+                let totalCellHtml = renderProgressClickableCell(totalList, totalTitle, 'staffContactProgressData', name, 'total');
+                totalCellHtml = totalCellHtml.replace('<td class="', '<td class="highlight-col font-bold ');
+                totalCellHtml = totalCellHtml.replace('<td>', '<td class="highlight-col font-bold">');
+                tableHtml += totalCellHtml;
+
+                tableHtml += '</tr>';
+            });
+
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+
+        /**
+         * 22. [NEW] 渲染 <表4-2> (依分級)
+         */
+        function renderRatingContactProgressTable() {
+            const container = document.getElementById('rating-contact-progress-table-container');
+            const { data, statuses } = ratingContactProgressData;
+
+            if (statuses.length === 0) {
+                container.innerHTML = '<p class="text-center p-4 text-gray-500">請先至 &lt;表1&gt; 匯入資料。</p>';
+                return;
+            }
+
+            let tableHtml = '<table class="team-table"><thead><tr><th class="!text-left">分級</th>';
+            statuses.forEach(status => {
+                tableHtml += `<th class="${getStatusClass(status)}">${status}</th>`;
+            });
+            tableHtml += '<th class="highlight-col">母體總數</th></tr></thead><tbody>';
+
+            const ratings = ['A', 'B', 'C', 'N/A', 'Total']; // 固定順序
+            const ratingLabels = { 'A': 'A級', 'B': 'B級', 'C': 'C級', 'N/A': '未分類', 'Total': '總計' };
+
+            ratings.forEach(rating => {
+                const ratingRow = data[rating];
+                const rowClass = (rating === 'Total') ? 'total-row' : 'hover:bg-gray-50';
+                tableHtml += `<tr class="${rowClass}"><td class="!font-medium">${ratingLabels[rating]}</td>`;
+
+                if (!ratingRow) {
+                    statuses.forEach(status => tableHtml += '<td>0</td>');
+                    tableHtml += '<td class="highlight-col font-bold">0</td>';
+                } else {
+                    const totalCount = (ratingRow.total || []).length;
+
+                    statuses.forEach(status => {
+                        const list = ratingRow[status] || [];
+                        const count = list.length;
+                        const percentage = (totalCount > 0) ? (count / totalCount * 100).toFixed(1) : 0;
+                        const title = `${ratingLabels[rating]} - ${status}`;
+
+                        let cellContent = renderProgressClickableCell(list, title, 'ratingContactProgressData', rating, status);
+                        cellContent = cellContent.replace(`>${count}<`, `>${count}<span class="percentage-text">(${percentage}%)</span><`);
+
+                        tableHtml += cellContent;
+                    });
+
+                    const totalList = ratingRow.total || [];
+                    const totalTitle = `${ratingLabels[rating]} - 母體總數`;
+                    let totalCellHtml = renderProgressClickableCell(totalList, totalTitle, 'ratingContactProgressData', rating, 'total');
+                    totalCellHtml = totalCellHtml.replace('<td class="', '<td class="highlight-col font-bold ');
+                    totalCellHtml = totalCellHtml.replace('<td>', '<td class="highlight-col font-bold">');
+                    tableHtml += totalCellHtml;
+                }
+                tableHtml += '</tr>';
+            });
+
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+
+        /**
+         * 23. [REFACTORED] 渲染 <表4-3> (同仁進度卡片)
+         */
+        function renderStaffProgressCards() {
+            const container = document.getElementById('staff-progress-cards-container');
+            const { data: staffCardData, statuses } = staffRatingProgressData;
+
+            if (statuses.length === 0 || Object.keys(staffCardData).length === 0) {
+                container.innerHTML = '<p class="text-center p-4 text-gray-500 col-span-1 lg:col-span-2">請先至 &lt;表1&gt; 匯入資料。</p>';
+                return;
+            }
+
+            container.innerHTML = ''; // 清空
+
+            const staffNames = Object.keys(staffCardData);
+            staffNames.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+            const ratings = ['A', 'B', 'C', 'N/A', 'Total'];
+            const ratingLabels = { 'A': 'A級', 'B': 'B級', 'C': 'C級', 'N/A': '未分類', 'Total': '總計' };
+
+            staffNames.forEach(name => {
+                const staffData = staffCardData[name];
+                let cardHtml = `<div class="progress-card">`;
+                cardHtml += `<h3 class="progress-card-title">${name}</h3>`;
+
+                // Card Body with table
+                cardHtml += `<div class="overflow-x-auto p-4 md:p-6">`;
+                cardHtml += `<table class="team-table">`;
+
+                // 1. Table Header
+                cardHtml += '<thead><tr><th class="!text-left">分級</th>';
+                statuses.forEach(status => {
+                    cardHtml += `<th class="${getStatusClass(status)}">${status}</th>`;
+                });
+                cardHtml += '<th class="highlight-col">母體總數</th></tr></thead>';
+
+                // 2. Table Body
+                cardHtml += '<tbody>';
+
+                ratings.forEach(rating => {
+                    const ratingData = staffData[rating];
+                    const totalList = ratingData['total'] || [];
+                    const totalCount = totalList.length;
+                    const rowClass = (rating === 'Total') ? 'total-row' : 'hover:bg-gray-50';
+
+                    cardHtml += `<tr class="${rowClass}"><td class="!font-medium">${ratingLabels[rating]}</td>`;
+
+                    // Status Columns
+                    statuses.forEach(status => {
+                        const list = ratingData[status] || [];
+                        const count = list.length;
+                        const title = `${name} - ${ratingLabels[rating]} - ${status}`;
+                        const percentage = (totalCount > 0) ? (count / totalCount * 100).toFixed(1) : 0;
+
+                        if (count > 0) {
+                            cardHtml += `<td class="clickable-cell" data-title="${title}" data-key1="staffRatingProgressData" data-key2="${name}" data-key3="${rating}" data-key4="${status}">${count}<span class="percentage-text">(${percentage}%)</span></td>`;
+                        } else {
+                            // 顯示 0 與 0%
+                            cardHtml += `<td>0<span class="percentage-text">(0.0%)</span></td>`;
+                        }
+                    });
+
+                    // Total Column
+                    const totalTitle = `${name} - ${ratingLabels[rating]} - 母體總數`;
+                    if (totalCount > 0) {
+                        cardHtml += `<td class="clickable-cell highlight-col font-bold" data-title="${totalTitle}" data-key1="staffRatingProgressData" data-key2="${name}" data-key3="${rating}" data-key4="total">${totalCount}</td>`;
+                    } else {
+                        cardHtml += `<td class="highlight-col font-bold">0</td>`;
+                    }
+
+                    cardHtml += '</tr>';
+                });
+
+                cardHtml += '</tbody></table></div></div>'; // Close table, div, and card
+                container.innerHTML += cardHtml;
+            });
+        }
+
+
+        /**
+         * 24. [MODIFIED] 匯出 Excel (加入聯繫比例, 更新表4編號)
+         */
+        function exportExcel(currentTab) {
+            showMessage(currentTab, 'info', 'Excel 匯出中，請稍候...');
+
+            try {
+                const wb = XLSX.utils.book_new();
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                let filename = `徵集報告_${timestamp}.xlsx`;
+
+                if (currentTab === 'tab2') {
+                    filename = `徵集組_團體簽約進度_${timestamp}.xlsx`; // Modified filename
+                    if (!document.querySelector('#team-goal-table-body') || !document.querySelector('#team-goal-table-body').closest('table')) {
+                        showMessage(currentTab, 'error', '無資料可匯出，請先匯入檔案。'); return;
+                    }
+                    const ws2_1 = XLSX.utils.table_to_sheet(document.querySelector('#team-goal-table-body').closest('table'));
+                    XLSX.utils.book_append_sheet(wb, ws2_1, "表2-1 目標進度");
+                    const ws2_2 = XLSX.utils.table_to_sheet(document.querySelector('#team-task-table').closest('table'));
+                    XLSX.utils.book_append_sheet(wb, ws2_2, "表2-2 任務完成");
+                    const ws2_3 = XLSX.utils.table_to_sheet(document.querySelector('#team-b2c-table').closest('table'));
+                    XLSX.utils.book_append_sheet(wb, ws2_3, "表2-3 B2C簽回");
+                    const ws2_4 = XLSX.utils.table_to_sheet(document.querySelector('#team-b2b-table').closest('table'));
+                    XLSX.utils.book_append_sheet(wb, ws2_4, "表2-4 B2B簽回");
+
+                } else if (currentTab === 'tab3') {
+                    filename = `徵集組_個人簽約進度_${timestamp}.xlsx`; // Modified filename
+                    if (!document.querySelector('#data-table-body') || !document.querySelector('#data-table-body').closest('table')) {
+                        showMessage(currentTab, 'error', '無資料可匯出。'); return;
+                    }
+                    const ws3_1 = XLSX.utils.table_to_sheet(document.querySelector('#data-table-body').closest('table'));
+                    XLSX.utils.book_append_sheet(wb, ws3_1, "表3-1 數據"); // 更新工作表名
+
+                    // 圖表數據 (Modified: 使用 lowTargetValue)
+                    let chartData = [
+                        ["負責徵集", "自設總目標", "簽約低標", "已簽約家數", "自設達成率(%)", "低標達成率(%)"] // Modified
+                    ];
+                    staffData.forEach(staff => {
+                        const selfRate = (staff.total === 0) ? 0 : ((staff.actual / staff.total) * 100).toFixed(1);
+                         // [MODIFIED] 使用 lowTargetValue
+                        const baseRate = ((staff.actual / lowTargetValue) * 100).toFixed(1);
+                        chartData.push([ staff.name, staff.total, lowTargetValue, staff.actual, selfRate, baseRate ]); // Modified
+                    });
+                    const ws3_2 = XLSX.utils.aoa_to_sheet(chartData);
+                    XLSX.utils.book_append_sheet(wb, ws3_2, "圖一 達成率數據"); // 更新工作表名
+
+                } else if (currentTab === 'tab4') {
+                    filename = `徵集組_聯繫進度報告_${timestamp}.xlsx`; // Modified filename
+                    if (!document.querySelector('#staff-contact-progress-table-container table')) {
+                        showMessage(currentTab, 'error', '無資料可匯出，請先匯入檔案。'); return;
+                    }
+
+                    const definitions = [
+                        ["聯繫階段", "定義"],
+                        ["未聯繫", "指2025/8/4後，仍尚未重啟聯繫者(過往聯繫不算)"],
+                        ["聯繫中", "已寄信或致電，但未明確可否合作"],
+                        ["已聯繫，有意願洽談", "有意合作"],
+                        ["已聯繫，無意願洽談", "明確婉拒合作，需進一步了解原因"],
+                        ["審約中", "雙方有討論條文"],
+                        ["用印中", "任一方開始用印"],
+                        ["已簽回，已移交合約", "已用印完畢，且負責簽約的徵集同仁已移交合約正本给公司。"]
+                    ];
+                    const wsDefs = XLSX.utils.aoa_to_sheet(definitions);
+                    XLSX.utils.book_append_sheet(wb, wsDefs, "階段定義");
+
+                    // [MODIFIED] 匯出聯繫比例 (表4-1)
+                    let contactRateSheetData = [["負責同仁", "已聯繫家數", "總家數", "聯繫比例(%)"]];
+                    const contactRateStaffNames = Object.keys(staffContactProgressData.contactRateData).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+                    contactRateStaffNames.forEach(name => {
+                        const d = staffContactProgressData.contactRateData[name];
+                        contactRateSheetData.push([name, d.contactedCount, d.totalCount, d.contactRate]);
+                    });
+                    const ws4_1_progress = XLSX.utils.aoa_to_sheet(contactRateSheetData); // 變數名修正
+                    XLSX.utils.book_append_sheet(wb, ws4_1_progress, "表4-1(聯繫比例)"); // 工作表名修正
+
+                    // [MODIFIED] 匯出依同仁 (表4-2)
+                    const ws4_2_staff = XLSX.utils.table_to_sheet(document.querySelector('#staff-contact-progress-table-container table'));
+                    XLSX.utils.book_append_sheet(wb, ws4_2_staff, "表4-2(依同仁)"); // 工作表名修正
+
+                    // [MODIFIED] 匯出依分級 (表4-3)
+                    const ws4_3_rating = XLSX.utils.table_to_sheet(document.querySelector('#rating-contact-progress-table-container table'));
+                    XLSX.utils.book_append_sheet(wb, ws4_3_rating, "表4-3(依分級)"); // 工作表名修正
+
+                    // [MODIFIED] 匯出同仁卡片 (表4-4)
+                    const { data, statuses } = staffRatingProgressData;
+                    const staffNames = Object.keys(data).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+                    staffNames.forEach(name => {
+                        const staffData = data[name];
+                        // [MODIFIED] 工作表名稱更新為 表4-4
+                        const sheetName = `表4-4 卡片-${name}`.substring(0, 31);
+                        let staffSheetData = [];
+                        const ratings = ['A', 'B', 'C', 'N/A', 'Total'];
+                        const ratingLabels = { 'A': 'A級', 'B': 'B級', 'C': 'C級', 'N/A': '未分類', 'Total': '總計 (All)' };
+
+                        // 匯出卡片表格
+                        let header = ["分級"];
+                        statuses.forEach(s => header.push(s));
+                        header.push("母體總數");
+                        staffSheetData.push(header);
+
+                        ratings.forEach(rating => {
+                            const ratingData = staffData[rating];
+                            const totalCount = (ratingData['total'] || []).length;
+                            let row = [ratingLabels[rating]];
+
+                            statuses.forEach(status => {
+                                const list = ratingData[status] || [];
+                                const count = list.length;
+                                const percentage = (totalCount > 0) ? (count / totalCount * 100).toFixed(1) : 0;
+                                row.push(`${count} (${percentage}%)`);
+                            });
+                            row.push(totalCount);
+                            staffSheetData.push(row);
+                        });
+
+                        const wsCard = XLSX.utils.aoa_to_sheet(staffSheetData);
+                        XLSX.utils.book_append_sheet(wb, wsCard, sheetName);
+                    });
+
+                } else {
+                    showMessage(currentTab, 'error', '未知的頁籤，無法匯出。');
+                    return;
+                }
+
+                XLSX.writeFile(wb, filename);
+                showMessage(currentTab, 'success', `成功匯出 ${filename}`);
+
+            } catch (err) {
+                console.error("Excel 匯出失敗:", err);
+                showMessage(currentTab, 'error', `Excel 匯出失敗: ${err.message}`);
+            }
+        }
+
+        /**
+         * 25. [REMOVED] 匯出 PDF (列印)
+         */
+
+        /**
+         * 26. [NEW] 顯示訊息
+         */
+        function showMessage(tabId, type = 'info', message) {
+            const msgBox = document.querySelector(`#${tabId}-content .message-box`);
+            if (!msgBox) return;
+
+            msgBox.textContent = message;
+            msgBox.classList.remove('hidden', 'msg-info', 'msg-success', 'msg-error');
+
+            if (type === 'success') {
+                msgBox.classList.add('msg-success');
+            } else if (type === 'error') {
+                msgBox.classList.add('msg-error');
+            } else {
+                msgBox.classList.add('msg-info');
+            }
+
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * 27. [MODIFIED] 下載匯入格式範例 (使用新的範例內容, 更新日期格式)
+         */
+        function downloadDemoTemplate() {
+            try {
+                // [MODIFIED] 更新為新的範例資料
+                const header = ["出版社名稱","合約編號","負責同仁","分級","聯繫狀態","徵集組指定任務","取得:電子書合作","取得:B2C銷售權利","取得:[灰熊]","取得:電子教科書TRMS","取得:[書紐]金石堂","取得:[書紐]三民","取得:B2C經銷第三方","取得:B2B銷售權利","取得:B2B_聯盟","取得:B2B_公圖","取得:B2B_CN"];
+                const exampleRow1 = ["範例出版社1","EBK00000_01","最強徵集1號","A","未聯繫",null,null,null,null,null,null,null,null,null,null,null,null];
+                const exampleRow2 = ["範例出版社2","EBK00000_02","最強徵集1號","A","聯繫中",null,null,null,null,null,null,null,null,null,null,null,null];
+                const exampleRow3 = ["範例出版社3","EBK00000_03","最強徵集2號","B","已聯繫，有意願洽談",null,null,null,null,null,null,null,null,null,null,null,null];
+                const exampleRow4 = ["範例出版社4","EBK00000_04","最強徵集2號","B","已聯繫，無意願洽談",null,null,null,null,null,null,null,null,null,null,null,null];
+                const exampleRow5 = ["範例出版社5","EBK00000_05","最強徵集3號","C","審約中",null,null,null,null,null,null,null,null,null,null,null,null];
+                const exampleRow6 = ["範例出版社6","EBK00000_06","最強徵集4號","C","用印中",null,null,null,null,null,null,null,null,null,null,null,null];
+                // [MODIFIED] 確保日期是文字格式 YYYY/M/D
+                const exampleRow7 = ["範例出版社7","EBK00000_07","最強徵集4號","C","已簽回，已移交合約",null,"2025/8/1","2025/8/1","2025/8/1",null,null,null,null,"2025/8/1","2025/8/1",null,null];
+
+                // [MODIFIED] 將所有範例資料放入 data 陣列
+                const data = [header, exampleRow1, exampleRow2, exampleRow3, exampleRow4, exampleRow5, exampleRow6, exampleRow7];
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(data, { cellDates: false, dateNF:'yyyy/m/d' }); // Ensure dates are written as strings with specified format if needed, though aoa_to_sheet treats them as strings by default
+
+
+                // 設置欄寬 (維持不變)
+                ws['!cols'] = [
+                    { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 20 },
+                    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
+                    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+                    { wch: 15 }, { wch: 15 }
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, "匯入範例");
+                XLSX.writeFile(wb, "匯入資料格式範例.xlsx");
+
+            } catch (err) {
+                console.error("無法下載範例檔案:", err);
+                const statusEl = document.getElementById('import-status');
+                statusEl.innerHTML = '<p class="text-red-600 font-semibold">❌ 範例檔案下載失敗！</p><p class="text-gray-600 mt-1">請確認瀏覽器設定並重試。</p>';
+            }
+        }
+
+    </script>
+</body>
+</html>
+
+
